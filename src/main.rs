@@ -18,6 +18,7 @@ use zbus_names::InterfaceName;
 use udev::{MonitorBuilder, Event};
 use std::os::fd::AsRawFd;
 use tokio::io::unix::AsyncFd;
+use tokio::process::Command;
 
 #[derive(Debug, Deserialize, Clone)]
 struct Config {
@@ -54,6 +55,8 @@ struct BatteryCase {
     timeout: u32,
     #[serde(default)]
     hints: HashSet<MyHint>,
+    #[serde(default)]
+    exec: Option<String>,
 }
 
 impl Default for BatteryCase {
@@ -66,7 +69,8 @@ impl Default for BatteryCase {
             body: "".to_string(),
             icon: "".to_string(),
             timeout: 0,
-            hints: vec![].into_iter().collect()
+            hints: vec![].into_iter().collect(),
+            exec: None,
         }
     }
 }
@@ -81,6 +85,7 @@ impl BatteryCase {
             icon: self.icon,
             timeout: self.timeout,
             hints: self.hints,
+            exec: self.exec,
         }
     }
 }
@@ -103,6 +108,8 @@ struct PowerStatusConfig {
     timeout: u32,
     #[serde(default)]
     hints: HashSet<MyHint>,
+    #[serde(default)]
+    exec: Option<String>,
 }
 
 impl Default for PowerStatusConfig {
@@ -115,7 +122,8 @@ impl Default for PowerStatusConfig {
             body: "".to_string(),
             icon: "".to_string(),
             timeout: 0,
-            hints: vec![].into_iter().collect()
+            hints: vec![].into_iter().collect(),
+            exec: None,
         }
     }
 }
@@ -130,6 +138,7 @@ impl PowerStatusConfig {
             icon: self.icon,
             timeout: self.timeout,
             hints: self.hints,
+            exec: self.exec,
         }
     }
 }
@@ -152,6 +161,8 @@ struct MemoryCase {
     timeout: u32,
     #[serde(default)]
     hints: HashSet<MyHint>,
+    #[serde(default)]
+    exec: Option<String>,
 }
 
 impl Default for MemoryCase {
@@ -164,7 +175,8 @@ impl Default for MemoryCase {
             body: "".to_string(),
             icon: "".to_string(),
             timeout: 0,
-            hints: vec![].into_iter().collect()
+            hints: vec![].into_iter().collect(),
+            exec: None,
         }
     }
 }
@@ -179,6 +191,7 @@ impl MemoryCase {
             icon: self.icon,
             timeout: self.timeout,
             hints: self.hints,
+            exec: self.exec,
         }
     }
 }
@@ -201,6 +214,8 @@ struct StorageCase {
     timeout: u32,
     #[serde(default)]
     hints: HashSet<MyHint>,
+    #[serde(default)]
+    exec: Option<String>,
 }
 
 impl Default for StorageCase {
@@ -213,7 +228,8 @@ impl Default for StorageCase {
             body: "".to_string(),
             icon: "".to_string(),
             timeout: 0,
-            hints: vec![].into_iter().collect()
+            hints: vec![].into_iter().collect(),
+            exec: None,
         }
     }
 }
@@ -228,6 +244,7 @@ impl StorageCase {
             icon: self.icon,
             timeout: self.timeout,
             hints: self.hints,
+            exec: self.exec,
         }
     }
 }
@@ -295,6 +312,8 @@ struct Message {
     icon: String,
     timeout: u32,
     hints: HashSet<MyHint>,
+    #[serde(default)]
+    exec: Option<String>,
 }
 
 impl Message {
@@ -325,6 +344,17 @@ fn parse_urgency(s: &str) -> Urgency {
         "critical" => Urgency::Critical,
         _ => Urgency::Normal,
     }
+}
+
+async fn maybe_run_exec(exec: &Option<String>) -> Result<()> {
+    if let Some(cmdline) = exec {
+        let status = Command::new("sh")
+            .arg("-c")
+            .arg(cmdline)
+            .status()
+            .await?;
+    }
+    Ok(())
 }
 
 async fn monitor_battery(cfg: Vec<BatteryCase>, sent: Arc<Mutex<HashSet<String>>>) -> Result<()> {
@@ -362,6 +392,7 @@ async fn monitor_battery(cfg: Vec<BatteryCase>, sent: Arc<Mutex<HashSet<String>>
 
             if should_notify {
                 let case_clone = case.clone();
+                maybe_run_exec(&case_clone.exec).await?;
                 tokio::task::spawn_blocking(move || {
                     case_clone.to_message().notify();
                 }).await?;
@@ -401,6 +432,7 @@ async fn monitor_memory(cfg: Vec<MemoryCase>, sent: Arc<Mutex<HashSet<String>>>)
 
             if should_notify {
                 let case_clone = case.clone();
+                maybe_run_exec(&case_clone.exec).await?;
                 tokio::task::spawn_blocking(move || {
                     case_clone.to_message().notify();
                 }).await?;
@@ -439,6 +471,7 @@ async fn monitor_storage(cfg: Vec<StorageCase>, sent: Arc<Mutex<HashSet<String>>
 
                 if should_notify {
                     let case_clone = case.clone();
+                    maybe_run_exec(&case_clone.exec).await?;
                     tokio::task::spawn_blocking(move || {
                         case_clone.to_message().notify();
                     }).await?;
