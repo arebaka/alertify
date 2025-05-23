@@ -1,0 +1,130 @@
+[[battery]]
+level = 20
+urgency = "critical"
+appname = "Низкий заряд батареи"
+summary = "Уровень заряда упал ниже 20%"
+body = ""
+icon = "battery-caution"
+timeout = 5000
+hints = ["transient", "category:battery", "string:x-dunst-stack-tag:battery.low"]
+
+[[battery]]
+level = 5
+urgency = "critical"
+appname = "Критический уровень заряда"
+summary = "Заряд батареи ниже 5%!"
+body = ""
+icon = "battery-empty"
+timeout = 10000
+hints = ["transient", "category:battery", "string:x-dunst-stack-tag:battery.low"]
+
+[[memory]]
+level = 90.0
+urgency = "normal"
+appname = "Высокое использование ОЗУ"
+summary = "ОЗУ используется на 90%"
+body = ""
+icon = "dialog-warning"
+timeout = 5000
+hints = ["transient", "category:memory", "string:x-dunst-stack-tag:memory.high"]
+
+[[storage]]
+level = 95.0
+urgency = "normal"
+appname = "Мало свободного места"
+summary = "Доступно менее 5% дискового пространства"
+body = ""
+icon = "drive-harddisk"
+timeout = 5000
+hints = ["category:storage", "string:x-dunst-stack-tag:storage.low"]
+
+[devices.usb.connect]
+urgency = "low"
+appname = "USB"
+summary = "Устройство подключено"
+body = "Подключено новое USB устройство"
+icon = "media-flash"
+timeout = 3000
+hints = ["transient", "category:usb", "string:x-dunst-stack-tag:usb.connect"]
+
+[devices.usb.disconnect]
+urgency = "low"
+appname = "USB"
+summary = "Устройство отключено"
+body = "USB устройство было отключено"
+icon = "media-flash"
+timeout = 3000
+hints = ["transient", "category:usb", "string:x-dunst-stack-tag:usb.disconnect"]
+
+[devices.hdmi.connect]
+urgency = "low"
+appname = "HDMI"
+summary = "Подключён"
+body = "HDMI устройство было подключено"
+icon = "video-display"
+timeout = 3000
+hints = ["transient", "category:hdmi", "string:x-dunst-stack-tag:hdmi.connect"]
+
+[devices.hdmi.disconnect]
+urgency = "low"
+appname = "HDMI"
+summary = "Отключён"
+body = "HDMI устройство отключено"
+icon = "video-display"
+timeout = 3000
+hints = ["transient", "category:hdmi", "string:x-dunst-stack-tag:hdmi.disconnect"]
+
+[devices.jack.connect]
+urgency = "low"
+appname = "Jack 3.5"
+summary = "Аудиоразъём подключён"
+body = "Аудио устройство подключено"
+icon = "audio-headphones"
+timeout = 3000
+hints = ["transient", "category:audio", "string:x-dunst-stack-tag:audio.connect"]
+
+[devices.jack.disconnect]
+urgency = "low"
+appname = "Jack 3.5"
+summary = "Аудиоразъём отключён"
+body = "Аудио устройство отключено"
+icon = "audio-headphones"
+timeout = 3000
+hints = ["transient", "category:audio", "string:x-dunst-stack-tag:audio.disconnect"]
+
+[network.disconnect]
+urgency = "critical"
+appname = "Сеть"
+summary = "Отключена"
+body = "Сетевое подключение потеряно"
+icon = "network-offline"
+timeout = 5000
+hints = ["transient", "category:network", "string:x-dunst-stack-tag:network.disconnect"]
+
+[network.reconnect]
+urgency = "normal"
+appname = "Сеть"
+summary = "Восстановлена"
+body = "Сетевое подключение восстановлено"
+icon = "network-transmit-receive"
+timeout = 5000
+hints = ["transient", "category:network", "string:x-dunst-stack-tag:network.reconnect"]
+
+[bluetooth.disconnect]
+urgency = "low"
+appname = "Bluetooth"
+summary = "Отключен"
+body = "Bluetooth устройство отключено"
+icon = "bluetooth-disabled"
+timeout = 3000
+hints = ["transient", "category:bluetooth", "string:x-dunst-stack-tag:bluetooth.disconnect"]
+
+[bluetooth.reconnect]
+urgency = "low"
+appname = "Bluetooth"
+summary = "Подключен"
+body = "Bluetooth устройство подключено"
+icon = "bluetooth-active"
+timeout = 3000
+hints = ["transient", "category:bluetooth", "string:x-dunst-stack-tag:bluetooth.reconnect"]
+
