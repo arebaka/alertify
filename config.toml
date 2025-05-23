@@ -5,7 +5,7 @@ appname = "Низкий заряд батареи"
 summary = "Уровень заряда упал ниже 20%"
 body = ""
 icon = "battery-caution"
-timeout = 5000
+timeout = 0
 hints = ["transient", "category:battery", "string:x-dunst-stack-tag:battery.low"]
 
 [[battery]]
@@ -15,7 +15,7 @@ appname = "Критический уровень заряда"
 summary = "Заряд батареи ниже 5%!"
 body = ""
 icon = "battery-empty"
-timeout = 10000
+timeout = 0
 hints = ["transient", "category:battery", "string:x-dunst-stack-tag:battery.low"]
 
 [[memory]]

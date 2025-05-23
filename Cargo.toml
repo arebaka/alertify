@@ -9,10 +9,11 @@ serde = { version = "1.0", features = ["derive"] }
 toml = "0.5"
 notify-rust = "4.5"
 sysinfo = "0.27"
-tokio = { version = "1", features = ["full"] }
+tokio = { version = "1.37", features = ["full"] }
 tokio-stream = "0.1"
 zbus = { version = "5.7", features = ["tokio"] }
 zbus_names = "4.2"
+zbus_macros = "3.14"
 udev = "0.7"
 anyhow = "1.0"
 futures-util = "0.3"
