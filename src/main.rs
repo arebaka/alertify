@@ -1,25 +1,17 @@
-use anyhow::{Result, anyhow};
+use anyhow::Result;
 use notify_rust::{Hint, Notification, Timeout, Urgency};
+use regex::{Captures, Regex};
 use serde::Deserialize;
 use std::collections::{HashMap, HashSet};
 use std::fs;
 use std::path::Path;
-use std::str::FromStr;
 use std::sync::{Arc, Mutex};
-use sysinfo::{System, Disks, DiskKind};
-use tokio::select;
-use tokio::time::{sleep, Duration};
-use tokio_stream::StreamExt;
-use zbus::{Connection, Proxy, MessageStream};
-use zbus::proxy::SignalStream;
-use zbus::fdo::{PropertiesProxy, PropertiesChanged};
-use zbus::zvariant::{Value, OwnedValue};
-use zbus_names::InterfaceName;
-use tokio_udev::{MonitorBuilder, Event, EventType, AsyncMonitorSocket};
-use std::os::fd::AsRawFd;
-use tokio::io::unix::AsyncFd;
+use sysinfo::{DiskKind, Disks, System};
 use tokio::process::Command;
-use regex::{Regex, Captures};
+use tokio_stream::StreamExt;
+use tokio_udev::{AsyncMonitorSocket, EventType, MonitorBuilder};
+use zbus::fdo::PropertiesProxy;
+use zbus_names::InterfaceName;
 
 #[derive(Debug, Deserialize, Clone)]
 struct Config {
@@ -40,218 +32,88 @@ struct Config {
 }
 
 #[derive(Debug, Deserialize, Clone)]
+#[serde(default)]
 struct BatteryCase {
-    #[serde(default)]
     level: f64,
-    #[serde(default)]
-    urgency: String,
-    #[serde(default)]
-    appname: String,
-    #[serde(default)]
-    summary: String,
-    #[serde(default)]
-    body: String,
-    #[serde(default)]
-    icon: String,
-    #[serde(default)]
-    timeout: u32,
-    #[serde(default)]
-    hints: HashSet<MyHint>,
-    #[serde(default)]
-    exec: Option<String>,
+    #[serde(flatten)]
+    message: Message,
 }
 
 impl Default for BatteryCase {
     fn default() -> Self {
         Self {
             level: 20.0,
-            urgency: "critical".to_string(),
-            appname: "".to_string(),
-            summary: "".to_string(),
-            body: "".to_string(),
-            icon: "".to_string(),
-            timeout: 0,
-            hints: vec![].into_iter().collect(),
-            exec: None,
+            message: Message {
+                urgency: "critical".to_string(),
+                ..Default::default()
+            },
         }
     }
 }
 
-impl BatteryCase {
-    fn notify(self, fields: &HashMap<&str, String>) {
-        Message {
-            urgency: self.urgency,
-            appname: self.appname,
-            summary: self.summary,
-            body: self.body,
-            icon: self.icon,
-            timeout: self.timeout,
-            hints: self.hints,
-            exec: self.exec,
-        }.notify(fields)
-    }
-}
-
 #[derive(Debug, Deserialize, Clone)]
+#[serde(default)]
 struct PowerStatusConfig {
-    #[serde(default)]
     enabled: bool,
-    #[serde(default)]
-    urgency: String,
-    #[serde(default)]
-    appname: String,
-    #[serde(default)]
-    summary: String,
-    #[serde(default)]
-    body: String,
-    #[serde(default)]
-    icon: String,
-    #[serde(default)]
-    timeout: u32,
-    #[serde(default)]
-    hints: HashSet<MyHint>,
-    #[serde(default)]
-    exec: Option<String>,
+    #[serde(flatten)]
+    message: Message,
 }
 
 impl Default for PowerStatusConfig {
     fn default() -> Self {
         Self {
             enabled: false,
-            urgency: "critical".to_string(),
-            appname: "".to_string(),
-            summary: "".to_string(),
-            body: "".to_string(),
-            icon: "".to_string(),
-            timeout: 0,
-            hints: vec![].into_iter().collect(),
-            exec: None,
+            message: Message {
+                urgency: "critical".to_string(),
+                ..Default::default()
+            },
         }
     }
 }
 
-impl PowerStatusConfig {
-    fn notify(self, fields: &HashMap<&str, String>) {
-        Message {
-            urgency: self.urgency,
-            appname: self.appname,
-            summary: self.summary,
-            body: self.body,
-            icon: self.icon,
-            timeout: self.timeout,
-            hints: self.hints,
-            exec: self.exec,
-        }.notify(fields)
-    }
-}
-
 #[derive(Debug, Deserialize, Clone)]
+#[serde(default)]
 struct MemoryCase {
-    #[serde(default)]
     level: f32,
-    #[serde(default)]
-    urgency: String,
-    #[serde(default)]
-    appname: String,
-    #[serde(default)]
-    summary: String,
-    #[serde(default)]
-    body: String,
-    #[serde(default)]
-    icon: String,
-    #[serde(default)]
-    timeout: u32,
-    #[serde(default)]
-    hints: HashSet<MyHint>,
-    #[serde(default)]
-    exec: Option<String>,
+    #[serde(flatten)]
+    message: Message,
 }
 
 impl Default for MemoryCase {
     fn default() -> Self {
         Self {
             level: 90.0,
-            urgency: "normal".to_string(),
-            appname: "".to_string(),
-            summary: "".to_string(),
-            body: "".to_string(),
-            icon: "".to_string(),
-            timeout: 0,
-            hints: vec![].into_iter().collect(),
-            exec: None,
+            message: Message {
+                urgency: "normal".to_string(),
+                ..Default::default()
+            },
         }
     }
 }
 
-impl MemoryCase {
-    fn notify(self, fields: &HashMap<&str, String>) {
-        Message {
-            urgency: self.urgency,
-            appname: self.appname,
-            summary: self.summary,
-            body: self.body,
-            icon: self.icon,
-            timeout: self.timeout,
-            hints: self.hints,
-            exec: self.exec,
-        }.notify(fields)
-    }
-}
-
 #[derive(Debug, Deserialize, Clone)]
+#[serde(default)]
 struct StorageCase {
-    #[serde(default)]
     level: f32,
-    #[serde(default)]
-    urgency: String,
-    #[serde(default)]
-    appname: String,
-    #[serde(default)]
-    summary: String,
-    #[serde(default)]
-    body: String,
-    #[serde(default)]
-    icon: String,
-    #[serde(default)]
-    timeout: u32,
-    #[serde(default)]
-    hints: HashSet<MyHint>,
-    #[serde(default)]
-    exec: Option<String>,
+    #[serde(flatten)]
+    message: Message,
 }
 
 impl Default for StorageCase {
     fn default() -> Self {
         Self {
             level: 95.0,
-            urgency: "normal".to_string(),
-            appname: "Storage".to_string(),
-            summary: "".to_string(),
-            body: "".to_string(),
-            icon: "".to_string(),
-            timeout: 0,
-            hints: vec![].into_iter().collect(),
-            exec: None,
+            message: Message {
+                urgency: "normal".to_string(),
+                appname: "Storage".to_string(),
+                ..Default::default()
+            },
         }
     }
 }
 
-impl StorageCase {
-    fn notify(self, fields: &HashMap<&str, String>) {
-        Message {
-            urgency: self.urgency,
-            appname: self.appname,
-            summary: self.summary,
-            body: self.body,
-            icon: self.icon,
-            timeout: self.timeout,
-            hints: self.hints,
-            exec: self.exec,
-        }.notify(fields)
-    }
-}
-
 #[derive(Debug, Deserialize, Clone)]
+#[serde(default)]
 struct DeviceCase {
     action: String,
     initialized: Option<bool>,
@@ -260,15 +122,8 @@ struct DeviceCase {
     sysnum: Option<i32>,
     devtype: Option<String>,
     driver: Option<String>,
-    urgency: String,
-    appname: String,
-    summary: String,
-    body: String,
-    icon: String,
-    timeout: u32,
-    hints: HashSet<MyHint>,
-    #[serde(default)]
-    exec: Option<String>,
+    #[serde(flatten)]
+    message: Message,
 }
 
 impl Default for DeviceCase {
@@ -281,30 +136,12 @@ impl Default for DeviceCase {
             sysnum: None,
             devtype: None,
             driver: None,
-            urgency: "normal".to_string(),
-            appname: "Device".to_string(),
-            summary: "".to_string(),
-            body: "".to_string(),
-            icon: "".to_string(),
-            timeout: 0,
-            hints: vec![].into_iter().collect(),
-            exec: None,
+            message: Message {
+                urgency: "normal".to_string(),
+                appname: "Device".to_string(),
+                ..Default::default()
+            },
         }
-    }
-}
-
-impl DeviceCase {
-    fn notify(self, fields: &HashMap<&str, String>) {
-        Message {
-            urgency: self.urgency,
-            appname: self.appname,
-            summary: self.summary,
-            body: self.body,
-            icon: self.icon,
-            timeout: self.timeout,
-            hints: self.hints,
-            exec: self.exec,
-        }.notify(fields)
     }
 }
 
@@ -326,30 +163,30 @@ struct MyHint(String);
 
 impl From<MyHint> for Hint {
     fn from(hint: MyHint) -> Hint {
-        let s = hint.0;
+        let s = hint.0.as_str();
         let parts: Vec<&str> = s.rsplitn(3, ':').collect();
 
-        let (key, value) = match parts.as_slice() {
+        let (key, value) = match *parts.as_slice() {
             // bool:transient:true
-            [val, key, "bool"] => (key.to_string(), val.to_string()),
+            [val, key, "bool"] => (key, val),
             // int:volume:100
-            [val, key, "int"] => (key.to_string(), val.to_string()),
+            [val, key, "int"] => (key, val),
             // double:progress:0.75
-            [val, key, "double"] => (key.to_string(), val.to_string()),
+            [val, key, "double"] => (key, val),
             // string:x-dunst-stack-tag:battery.low
-            [val, key, "string"] => (key.to_string(), val.to_string()),
+            [val, key, "string"] => (key, val),
             // fallback: no type, just key:value
-            [val, key] => (key.to_string(), val.to_string()),
+            [val, key] => (key, val),
             // just key
-            [key] => (key.to_string(), String::new()),
-            _ => (s, String::new()),
+            [key] => (key, ""),
+            _ => (s, ""),
         };
 
-        Hint::from_key_val(&key, &value).unwrap_or_else(|_| Hint::Custom(key, value))
+        Hint::from_key_val(key, value).unwrap_or(Hint::Custom(key.to_string(), value.to_string()))
     }
 }
 
-#[derive(Debug, Deserialize, Clone)]
+#[derive(Default, Debug, Deserialize, Clone)]
 struct Message {
     urgency: String,
     appname: String,
@@ -363,12 +200,16 @@ struct Message {
 }
 
 impl Message {
-    fn render(&self, template: &str, fields: &HashMap<&str, String>) -> String {
+    fn render(template: &str, fields: &HashMap<&str, String>) -> String {
         let re = Regex::new(r"\{([a-zA-Z0-9_]+)\}").unwrap();
         re.replace_all(template, |caps: &Captures| {
             let key = &caps[1];
-            fields.get(key).cloned().unwrap_or_else(|| caps[0].to_string())
-        }).into_owned()
+            fields
+                .get(key)
+                .cloned()
+                .unwrap_or_else(|| caps[0].to_string())
+        })
+        .into_owned()
     }
 
     fn notify(&self, fields: &HashMap<&str, String>) {
@@ -377,9 +218,9 @@ impl Message {
 
         notification
             .urgency(urgency)
-            .appname(&self.render(&self.appname, fields))
-            .summary(&self.render(&self.summary, fields))
-            .body(&self.render(&self.body, fields))
+            .appname(&Self::render(&self.appname, fields))
+            .summary(&Self::render(&self.summary, fields))
+            .body(&Self::render(&self.body, fields))
             .icon(&self.icon)
             .timeout(Timeout::Milliseconds(self.timeout));
 
@@ -400,14 +241,10 @@ fn parse_urgency(s: &str) -> Urgency {
     }
 }
 
-async fn maybe_exec(exec: &Option<String>) -> Result<()> {
+fn maybe_exec(exec: Option<&String>) {
     if let Some(cmdline) = exec {
-        let status = Command::new("sh")
-            .arg("-c")
-            .arg(cmdline)
-            .spawn();
+        let status = Command::new("sh").arg("-c").arg(cmdline).spawn();
     }
-    Ok(())
 }
 /*
 async fn listen_property_changes(cfg: &Config) -> Result<()> {
@@ -466,7 +303,9 @@ async fn monitor_battery(cfg: Vec<BatteryCase>, sent: Arc<Mutex<HashSet<String>>
     let interface = InterfaceName::try_from("org.freedesktop.UPower.Device")?;
 
     loop {
-        let value = properties.get(interface.clone(), "Percentage").await?
+        let value = properties
+            .get(interface.clone(), "Percentage")
+            .await?
             .downcast_ref::<f64>()?
             .to_owned();
 
@@ -476,14 +315,13 @@ async fn monitor_battery(cfg: Vec<BatteryCase>, sent: Arc<Mutex<HashSet<String>>
                 let mut sent_guard = sent.lock().unwrap();
 
                 if value < case.level {
-                    if !sent_guard.contains(&key) {
+                    if sent_guard.contains(&key) {
+                        false
+                    } else {
                         sent_guard.insert(key);
                         true
-                    } else {
-                        false
                     }
-                }
-                else {
+                } else {
                     sent_guard.remove(&key);
                     false
                 }
@@ -496,17 +334,16 @@ async fn monitor_battery(cfg: Vec<BatteryCase>, sent: Arc<Mutex<HashSet<String>>
                 fields.insert("used_percent", (100 - value as u32).to_string());
 
                 let case_clone = case.clone();
-                maybe_exec(&case_clone.exec).await?;
+                maybe_exec(case_clone.message.exec.as_ref());
                 tokio::task::spawn_blocking(move || {
-                    case_clone.notify(&fields);
-                }).await?;
+                    case_clone.message.notify(&fields);
+                })
+                .await?;
             }
         }
 
         tokio::time::sleep(std::time::Duration::from_secs(10)).await;
     }
-
-    Ok(())
 }
 
 async fn monitor_memory(cfg: Vec<MemoryCase>, sent: Arc<Mutex<HashSet<String>>>) -> Result<()> {
@@ -526,14 +363,13 @@ async fn monitor_memory(cfg: Vec<MemoryCase>, sent: Arc<Mutex<HashSet<String>>>)
                 let mut sent_guard = sent.lock().unwrap();
 
                 if used_percent >= case.level {
-                    if !sent_guard.contains(&key) {
+                    if sent_guard.contains(&key) {
+                        false
+                    } else {
                         sent_guard.insert(key);
                         true
-                    } else {
-                        false
                     }
-                }
-                else {
+                } else {
                     sent_guard.remove(&key);
                     false
                 }
@@ -554,10 +390,11 @@ async fn monitor_memory(cfg: Vec<MemoryCase>, sent: Arc<Mutex<HashSet<String>>>)
                 fields.insert("left_percent", (left_percent as u32).to_string());
 
                 let case_clone = case.clone();
-                maybe_exec(&case_clone.exec).await?;
+                maybe_exec(case_clone.message.exec.as_ref());
                 tokio::task::spawn_blocking(move || {
-                    case_clone.notify(&fields);
-                }).await?;
+                    case_clone.message.notify(&fields);
+                })
+                .await?;
             }
         }
 
@@ -575,7 +412,8 @@ async fn monitor_storage(cfg: Vec<StorageCase>, sent: Arc<Mutex<HashSet<String>>
                     DiskKind::HDD => "HDD",
                     DiskKind::SSD => "SSD",
                     _ => "unknown",
-                }.to_string();
+                }
+                .to_string();
 
                 let name = disk.name().to_string_lossy().into_owned();
                 let fs = disk.file_system().to_string_lossy().into_owned();
@@ -591,42 +429,42 @@ async fn monitor_storage(cfg: Vec<StorageCase>, sent: Arc<Mutex<HashSet<String>>
                     let mut sent_guard = sent.lock().unwrap();
 
                     if used_percent >= case.level {
-                        if !sent_guard.contains(&key) {
+                        if sent_guard.contains(&key) {
+                            false
+                        } else {
                             sent_guard.insert(key);
                             true
-                        } else {
-                            false
                         }
-                    }
-                    else {
+                    } else {
                         sent_guard.remove(&key);
                         false
                     }
                 };
 
                 if should_notify {
-                let mut fields = HashMap::new();
-                fields.insert("level", case.level.to_string());
-                fields.insert("kind", kind);
-                fields.insert("name", name);
-                fields.insert("fs", fs);
-                fields.insert("mount", mount);
-                fields.insert("total_bytes", total.to_string());
-                fields.insert("total", humansize::format_size(total, humansize::DECIMAL));
-                fields.insert("used_bytes", used.to_string());
-                fields.insert("used", humansize::format_size(used, humansize::DECIMAL));
-                fields.insert("used_percent_full", used_percent.to_string());
-                fields.insert("value_percent", (used_percent as u32).to_string());
-                fields.insert("left_bytes", left.to_string());
-                fields.insert("left", humansize::format_size(left, humansize::DECIMAL));
-                fields.insert("left_percent_full", left_percent.to_string());
-                fields.insert("left_percent", (left_percent as u32).to_string());
+                    let mut fields = HashMap::new();
+                    fields.insert("level", case.level.to_string());
+                    fields.insert("kind", kind);
+                    fields.insert("name", name);
+                    fields.insert("fs", fs);
+                    fields.insert("mount", mount);
+                    fields.insert("total_bytes", total.to_string());
+                    fields.insert("total", humansize::format_size(total, humansize::DECIMAL));
+                    fields.insert("used_bytes", used.to_string());
+                    fields.insert("used", humansize::format_size(used, humansize::DECIMAL));
+                    fields.insert("used_percent_full", used_percent.to_string());
+                    fields.insert("value_percent", (used_percent as u32).to_string());
+                    fields.insert("left_bytes", left.to_string());
+                    fields.insert("left", humansize::format_size(left, humansize::DECIMAL));
+                    fields.insert("left_percent_full", left_percent.to_string());
+                    fields.insert("left_percent", (left_percent as u32).to_string());
 
                     let case_clone = case.clone();
-                    maybe_exec(&case_clone.exec).await?;
+                    maybe_exec(case_clone.message.exec.as_ref());
                     tokio::task::spawn_blocking(move || {
-                        case_clone.notify(&fields);
-                    }).await?;
+                        case_clone.message.notify(&fields);
+                    })
+                    .await?;
                 }
             }
         }
@@ -636,8 +474,16 @@ async fn monitor_storage(cfg: Vec<StorageCase>, sent: Arc<Mutex<HashSet<String>>
 }
 
 async fn listen_udev(cases: Vec<DeviceCase>, sent: Arc<Mutex<HashSet<String>>>) -> Result<()> {
-    let ALLOW_SUBSYSTEMS = [
-        "usb", "block", "net", "input", "sound", "drm", "tty", "power_supply", "video4linux"
+    const ALLOW_SUBSYSTEMS: &[&str] = &[
+        "usb",
+        "block",
+        "net",
+        "input",
+        "sound",
+        "drm",
+        "tty",
+        "power_supply",
+        "video4linux",
     ];
 
     let mut monitor = MonitorBuilder::new()?;
@@ -648,11 +494,13 @@ async fn listen_udev(cases: Vec<DeviceCase>, sent: Arc<Mutex<HashSet<String>>>) 
 
     while let Some(Ok(event)) = socket.next().await {
         let initialized = event.is_initialized();
-        let subsystem   = event.subsystem().and_then(|s| s.to_str().map(str::to_string));
-        let sysname     = event.sysname().to_str().map(str::to_string);
-        let sysnum      = event.sysnum().map(|n| n as i32);
-        let devtype     = event.devtype().and_then(|s| s.to_str().map(str::to_string));
-        let driver      = event.driver().and_then(|s| s.to_str().map(str::to_string));
+        let subsystem = event
+            .subsystem()
+            .and_then(|s| s.to_str().map(str::to_string));
+        let sysname = event.sysname().to_str().map(str::to_string);
+        let sysnum = event.sysnum().map(|n| n as i32);
+        let devtype = event.devtype().and_then(|s| s.to_str().map(str::to_string));
+        let driver = event.driver().and_then(|s| s.to_str().map(str::to_string));
 
         let action = match event.event_type() {
             EventType::Add => "add",
@@ -662,45 +510,40 @@ async fn listen_udev(cases: Vec<DeviceCase>, sent: Arc<Mutex<HashSet<String>>>) 
             _ => continue,
         };
 
-        for case in cases.iter().filter(|case| {
-            case.action == action
-            && case.initialized.map_or(true, |v| v == initialized)
-            && match (&case.subsystem, &subsystem) {
-                (None, _) => true,
-                (_, None) => true,
-                (Some(expect), Some(actual)) if expect == actual => true,
-                _ => false,
-            }
-            && match (&case.sysname, &sysname) {
-                (None, _) => true,
-                (_, None) => true,
-                (Some(expect), Some(actual)) if expect == actual => true,
-                _ => false,
-            }
-            && case.sysnum.map_or(true, |v| sysnum.map_or(false, |n| n == v))
-            && match (&case.devtype, &devtype) {
-                (None, _) => true,
-                (_, None) => true,
-                (Some(expect), Some(actual)) if expect == actual => true,
-                _ => false,
-            }
-            && match (&case.driver, &driver) {
-                (None, _) => true,
-                (_, None) => true,
-                (Some(expect), Some(actual)) if expect == actual => true,
-                _ => false,
-            }
-        }) {
+        for case in cases
+            .iter()
+            .filter(|case| case.action == action)
+            .filter(|case| case.initialized.is_none_or(|v| v == initialized))
+            .filter(|case| match (&case.subsystem, &subsystem) {
+                (None, _) | (_, None) => true,
+                (Some(expect), Some(actual)) => expect == actual,
+            })
+            .filter(|case| match (&case.sysname, &sysname) {
+                (None, _) | (_, None) => true,
+                (Some(expect), Some(actual)) => expect == actual,
+            })
+            .filter(|case| case.sysnum.is_none_or(|v| sysnum == Some(v)))
+            .filter(|case| match (&case.devtype, &devtype) {
+                (None, _) | (_, None) => true,
+                (Some(expect), Some(actual)) => expect == actual,
+            })
+            .filter(|case| match (&case.driver, &driver) {
+                (None, _) | (_, None) => true,
+                (Some(expect), Some(actual)) => expect == actual,
+            })
+        {
             let mut fields = HashMap::new();
-            let subsystem   = event.subsystem().and_then(|s| s.to_str().map(str::to_string));
-            let sysname     = event.sysname().to_str().map(str::to_string);
-            let sysnum      = event.sysnum().map(|n| n as i32);
-            let devtype     = event.devtype().and_then(|s| s.to_str().map(str::to_string));
-            let driver      = event.driver().and_then(|s| s.to_str().map(str::to_string));
-            let seq_num     = Some(event.sequence_number().to_string());
-            let syspath     = event.syspath().to_str().map(str::to_string);
-            let devpath     = event.devpath().to_str().map(str::to_string);
-            let devnode     = event.devnode().and_then(|s| s.to_str().map(str::to_string));
+            let subsystem = event
+                .subsystem()
+                .and_then(|s| s.to_str().map(str::to_string));
+            let sysname = event.sysname().to_str().map(str::to_string);
+            let sysnum = event.sysnum().map(|n| n as i32);
+            let devtype = event.devtype().and_then(|s| s.to_str().map(str::to_string));
+            let driver = event.driver().and_then(|s| s.to_str().map(str::to_string));
+            let seq_num = Some(event.sequence_number().to_string());
+            let syspath = event.syspath().to_str().map(str::to_string);
+            let devpath = event.devpath().to_str().map(str::to_string);
+            let devnode = event.devnode().and_then(|s| s.to_str().map(str::to_string));
 
             fields.insert("subsystem", subsystem);
             fields.insert("sysname", sysname);
@@ -713,10 +556,16 @@ async fn listen_udev(cases: Vec<DeviceCase>, sent: Arc<Mutex<HashSet<String>>>) 
             fields.insert("devnode", devnode);
 
             let case_clone = case.clone();
-            maybe_exec(&case_clone.exec).await?;
+            maybe_exec(case_clone.message.exec.as_ref());
             tokio::task::spawn_blocking(move || {
-                case_clone.notify(&fields.iter().map(|(&k, v)| (k, v.clone().unwrap_or_default())).collect());
-            }).await?;
+                case_clone.message.notify(
+                    &fields
+                        .iter()
+                        .map(|(&k, v)| (k, v.clone().unwrap_or_default()))
+                        .collect(),
+                );
+            })
+            .await?;
         }
     }
 
@@ -730,16 +579,14 @@ async fn main() -> Result<()> {
     let cfg: Config = toml::from_str(&config_raw)?;
 
     let sent = Arc::new(Mutex::new(HashSet::new()));
-    let mut handles = vec![];
-
-    handles.push(tokio::spawn(monitor_battery(cfg.battery.clone(), sent.clone())));
-    handles.push(tokio::spawn(monitor_memory(cfg.memory.clone(), sent.clone())));
-    handles.push(tokio::spawn(monitor_storage(cfg.storage.clone(), sent.clone())));
-/*
-    handles.push(tokio::spawn(monitor_network(cfg.network.clone(), sent.clone())));
-    handles.push(tokio::spawn(monitor_bluetooth(cfg.bluetooth.clone(), sent.clone())));
-*/
-    listen_udev(cfg.device.clone(), sent.clone()).await;
+    let handles = vec![
+        tokio::spawn(monitor_battery(cfg.battery.clone(), sent.clone())),
+        tokio::spawn(monitor_memory(cfg.memory.clone(), sent.clone())),
+        tokio::spawn(monitor_storage(cfg.storage.clone(), sent.clone())),
+        // tokio::spawn(monitor_network(cfg.network.clone(), sent.clone())),
+        // tokio::spawn(monitor_bluetooth(cfg.bluetooth.clone(), sent.clone())),
+    ];
+    listen_udev(cfg.device.clone(), sent.clone()).await.unwrap();
     for h in handles {
         let _ = h.await;
     }
