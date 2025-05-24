@@ -9,7 +9,7 @@ use std::sync::{Arc, Mutex};
 use sysinfo::{DiskKind, Disks, System};
 use tokio::process::Command;
 use tokio_stream::StreamExt;
-use tokio_udev::{AsyncMonitorSocket, EventType, MonitorBuilder};
+use tokio_udev::{AsyncMonitorSocket, EventType, MonitorBuilder, Device};
 use zbus::fdo::PropertiesProxy;
 use zbus_names::InterfaceName;
 
@@ -18,9 +18,7 @@ struct Config {
     #[serde(default)]
     battery: Vec<BatteryCase>,
     #[serde(default)]
-    ac_online: PowerStatusConfig,
-    #[serde(default)]
-    ac_offline: PowerStatusConfig,
+    power_supply: Vec<PowerStatusCase>,
     #[serde(default)]
     memory: Vec<MemoryCase>,
     #[serde(default)]
@@ -45,26 +43,7 @@ impl Default for BatteryCase {
             level: 20.0,
             message: Message {
                 urgency: "critical".to_string(),
-                ..Default::default()
-            },
-        }
-    }
-}
-
-#[derive(Debug, Deserialize, Clone)]
-#[serde(default)]
-struct PowerStatusConfig {
-    enabled: bool,
-    #[serde(flatten)]
-    message: Message,
-}
-
-impl Default for PowerStatusConfig {
-    fn default() -> Self {
-        Self {
-            enabled: false,
-            message: Message {
-                urgency: "critical".to_string(),
+                appname: "Battery".to_string(),
                 ..Default::default()
             },
         }
@@ -85,6 +64,7 @@ impl Default for MemoryCase {
             level: 90.0,
             message: Message {
                 urgency: "normal".to_string(),
+                appname: "Memory".to_string(),
                 ..Default::default()
             },
         }
@@ -137,8 +117,34 @@ impl Default for DeviceCase {
             devtype: None,
             driver: None,
             message: Message {
-                urgency: "normal".to_string(),
+                urgency: "low".to_string(),
                 appname: "Device".to_string(),
+                ..Default::default()
+            },
+        }
+    }
+}
+
+#[derive(Debug, Deserialize, Clone)]
+#[serde(default)]
+struct PowerStatusCase {
+    name: Option<String>,
+    #[serde(rename = "type")]
+    supply_type: Option<String>,
+    online: Option<String>,
+    #[serde(flatten)]
+    message: Message,
+}
+
+impl Default for PowerStatusCase {
+    fn default() -> Self {
+        Self {
+            name: None,
+            supply_type: None,
+            online: None,
+            message: Message {
+                urgency: "low".to_string(),
+                appname: "Power supply".to_string(),
                 ..Default::default()
             },
         }
@@ -193,7 +199,7 @@ struct Message {
     summary: String,
     body: String,
     icon: String,
-    timeout: u32,
+    timeout: Option<u32>,
     hints: HashSet<MyHint>,
     #[serde(default)]
     exec: Option<String>,
@@ -221,8 +227,10 @@ impl Message {
             .appname(&Self::render(&self.appname, fields))
             .summary(&Self::render(&self.summary, fields))
             .body(&Self::render(&self.body, fields))
-            .icon(&self.icon)
-            .timeout(Timeout::Milliseconds(self.timeout));
+            .icon(&self.icon);
+        if let Some(timeout) = self.timeout {
+            notification.timeout(Timeout::Milliseconds(timeout));
+        }
 
         for hint in &self.hints {
             notification.hint(hint.clone().into());
@@ -243,56 +251,10 @@ fn parse_urgency(s: &str) -> Urgency {
 
 fn maybe_exec(exec: Option<&String>) {
     if let Some(cmdline) = exec {
-        let status = Command::new("sh").arg("-c").arg(cmdline).spawn();
+        let _ = Command::new("sh").arg("-c").arg(cmdline).spawn();
     }
 }
-/*
-async fn listen_property_changes(cfg: &Config) -> Result<()> {
-    let conn = Connection::system().await?;
-    let mut stream = MessageStream::from(&conn);
 
-    while let Some(msg) = stream.next().await {
-        let msg = msg?;
-        let (interface, changed, _): (
-            InterfaceName<'_>,
-            HashMap<String, OwnedValue>,
-            Vec<String>,
-        ) = msg.body().try_into()?;
-
-        match interface.as_str() {
-            "org.freedesktop.UPower.Device" => {
-                handle_power_connection_change(cfg, changed).await?
-            }
-            _ => {}
-        }
-    }
-
-    Ok(())
-}
-
-async fn handle_power_connection_change(cfg: &Config, changed: HashMap<String, OwnedValue>) -> Result<()> {
-    if let Some(value) = changed.get("Online") {
-        let mut case: PowerStatusConfig;
-        if let Some(is_online) = value.downcast_ref::<bool>() {
-            let case = if *is_online {
-                cfg.ac_offline.clone()
-            } else {
-                cfg.ac_offline.clone()
-            };
-
-            let case_clone = case.clone();
-            tokio::task::spawn_blocking(move || {
-                case_clone.to_message().notify();
-            }).await?;
-        }
-        else {
-            return Err(anyhow!("Failed to downcast Online to bool"));
-        }
-    }
-
-    Ok(())
-}
-*/
 async fn monitor_battery(cfg: Vec<BatteryCase>, sent: Arc<Mutex<HashSet<String>>>) -> Result<()> {
     let conn = zbus::Connection::system().await?;
     let properties = PropertiesProxy::builder(&conn)
@@ -473,7 +435,7 @@ async fn monitor_storage(cfg: Vec<StorageCase>, sent: Arc<Mutex<HashSet<String>>
     }
 }
 
-async fn listen_udev(cases: Vec<DeviceCase>, sent: Arc<Mutex<HashSet<String>>>) -> Result<()> {
+async fn listen_udev(cfg: Config, sent: Arc<Mutex<HashSet<String>>>) -> Result<()> {
     const ALLOW_SUBSYSTEMS: &[&str] = &[
         "usb",
         "block",
@@ -507,11 +469,16 @@ async fn listen_udev(cases: Vec<DeviceCase>, sent: Arc<Mutex<HashSet<String>>>) 
             EventType::Remove => "remove",
             EventType::Bind => "bind",
             EventType::Unbind => "unbind",
+            EventType::Change => "change",
             _ => continue,
         };
 
-        for case in cases
-            .iter()
+        if subsystem.clone().unwrap() == *"power_supply" && action == "change" {
+            let _ = handle_power_supply_change(event.clone(), cfg.clone().power_supply, sent.clone()).await;
+            continue;
+        }
+
+        for case in cfg.device.iter()
             .filter(|case| case.action == action)
             .filter(|case| case.initialized.is_none_or(|v| v == initialized))
             .filter(|case| match (&case.subsystem, &subsystem) {
@@ -564,9 +531,56 @@ async fn listen_udev(cases: Vec<DeviceCase>, sent: Arc<Mutex<HashSet<String>>>) 
                         .map(|(&k, v)| (k, v.clone().unwrap_or_default()))
                         .collect(),
                 );
-            })
-            .await?;
+            });
         }
+    }
+
+    Ok(())
+}
+
+async fn handle_power_supply_change(event: Device, cases: Vec<PowerStatusCase>, sent: Arc<Mutex<HashSet<String>>>) -> Result<()> {
+    let name = event
+        .property_value("POWER_SUPPLY_NAME")
+        .and_then(|s| s.to_str())
+        .map(str::to_string);
+    let supply_type = event
+        .property_value("POWER_SUPPLY_TYPE")
+        .and_then(|s| s.to_str())
+        .map(str::to_string);
+    let online = event
+        .property_value("POWER_SUPPLY_ONLINE")
+        .and_then(|s| s.to_str())
+        .map(str::to_string);
+
+    for case in cases.into_iter()
+        .filter(|case| match (&case.name, &name) {
+            (None, _) | (_, None) => true,
+            (Some(expect), Some(actual)) => expect == actual,
+        })
+        .filter(|case| match (&case.supply_type, &supply_type) {
+            (None, _) | (_, None) => true,
+            (Some(expect), Some(actual)) => expect == actual,
+        })
+        .filter(|case| match (&case.online, &online) {
+            (None, _) | (_, None) => true,
+            (Some(expect), Some(actual)) => expect == actual,
+        })
+    {
+        let mut fields = HashMap::new();
+        fields.insert("name", name.clone());
+        fields.insert("type", supply_type.clone());
+        fields.insert("online", online.clone());
+
+        maybe_exec(case.message.exec.as_ref());
+        tokio::task::spawn_blocking(move || {
+            case.message.notify(
+                &fields
+                    .iter()
+                    .map(|(&k, v)| (k, v.clone().unwrap_or_default()))
+                    .collect(),
+            );
+        })
+        .await?;
     }
 
     Ok(())
@@ -586,7 +600,7 @@ async fn main() -> Result<()> {
         // tokio::spawn(monitor_network(cfg.network.clone(), sent.clone())),
         // tokio::spawn(monitor_bluetooth(cfg.bluetooth.clone(), sent.clone())),
     ];
-    listen_udev(cfg.device.clone(), sent.clone()).await.unwrap();
+    listen_udev(cfg, sent.clone()).await.unwrap();
     for h in handles {
         let _ = h.await;
     }

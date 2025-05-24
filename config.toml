@@ -5,7 +5,6 @@ appname = "Низкий заряд батареи"
 summary = "Уровень заряда упал до {left_percent}%!"
 body = ""
 icon = "battery-caution"
-timeout = 0
 hints = ["transient", "category:battery", "string:x-dunst-stack-tag:battery.low"]
 
 [[battery]]
@@ -25,7 +24,6 @@ appname = "Высокое использование ОЗУ"
 summary = "ОЗУ используется на {used_percent}%!"
 body = "Всего доступно {total}, осталось {left}."
 icon = "dialog-warning"
-timeout = 5000
 hints = ["transient", "category:memory", "string:x-dunst-stack-tag:memory.high"]
 
 [[storage]]
@@ -35,7 +33,6 @@ appname = "Мало свободного места"
 summary = "Доступно менее {left_percent}% дискового пространства!"
 body = "На устройстве {name} всего доступно {total}, осталось {left}."
 icon = "drive-harddisk"
-timeout = 5000
 hints = ["category:storage", "string:x-dunst-stack-tag:storage.low"]
 
 [[device]]
@@ -46,7 +43,6 @@ appname = "USB"
 summary = "Устройство подключено"
 body = "Подключено новое USB устройство: {devpath}"
 icon = "media-flash"
-timeout = 3000
 hints = ["transient", "category:usb", "string:x-dunst-stack-tag:usb.connect"]
 
 [[device]]
@@ -57,7 +53,6 @@ appname = "USB"
 summary = "Устройство отключено"
 body = "USB устройство было отключено: {devpath}"
 icon = "media-flash"
-timeout = 3000
 hints = ["transient", "category:usb", "string:x-dunst-stack-tag:usb.disconnect"]
 
 [[device]]
@@ -68,7 +63,6 @@ appname = "HDMI"
 summary = "Подключён"
 body = "HDMI устройство было подключено"
 icon = "video-display"
-timeout = 3000
 hints = ["transient", "category:hdmi", "string:x-dunst-stack-tag:hdmi.connect"]
 
 [[device]]
@@ -79,7 +73,6 @@ appname = "HDMI"
 summary = "Отключён"
 body = "HDMI устройство отключено"
 icon = "video-display"
-timeout = 3000
 hints = ["transient", "category:hdmi", "string:x-dunst-stack-tag:hdmi.disconnect"]
 
 [[device]]
@@ -90,7 +83,6 @@ appname = "Jack 3.5"
 summary = "Аудиоразъём подключён"
 body = "Аудио устройство подключено"
 icon = "audio-headphones"
-timeout = 3000
 hints = ["transient", "category:audio", "string:x-dunst-stack-tag:audio.connect"]
 
 [[device]]
@@ -101,30 +93,27 @@ appname = "Jack 3.5"
 summary = "Аудиоразъём отключён"
 body = "Аудио устройство отключено"
 icon = "audio-headphones"
-timeout = 3000
 hints = ["transient", "category:audio", "string:x-dunst-stack-tag:audio.disconnect"]
 
-[[device]]
-action = "add"
-subsystem = "power_supply"
+[[power_supply]]
+name = "AC"
+online = "1"
 urgency = "low"
 appname = "Питание"
-summary = "AC кабель подключён"
+summary = "Кабель питания подключён"
 body = ""
 icon = "ac-adapter"
-timeout = 3000
-hints = ["transient", "category:usb", "string:x-dunst-stack-tag:usb.connect"]
+hints = ["transient", "category:power-supply", "string:x-dunst-stack-tag:power-supply.online"]
 
-[[device]]
-action = "remove"
-subsystem = "power_supply"
+[[power_supply]]
+name = "AC"
+online = "0"
 urgency = "low"
 appname = "Питание"
-summary = "AC кабель отключён"
+summary = "Кабель питания отключён"
 body = ""
 icon = "ac-adapter"
-timeout = 3000
-hints = ["transient", "category:usb", "string:x-dunst-stack-tag:usb.disconnect"]
+hints = ["transient", "category:power-supply", "string:x-dunst-stack-tag:power-supply.offline"]
 
 [network.disconnect]
 urgency = "critical"
@@ -132,7 +121,6 @@ appname = "Сеть"
 summary = "Отключена"
 body = "Сетевое подключение потеряно"
 icon = "network-offline"
-timeout = 5000
 hints = ["transient", "category:network", "string:x-dunst-stack-tag:network.disconnect"]
 
 [network.reconnect]
@@ -141,7 +129,6 @@ appname = "Сеть"
 summary = "Восстановлена"
 body = "Сетевое подключение восстановлено"
 icon = "network-transmit-receive"
-timeout = 5000
 hints = ["transient", "category:network", "string:x-dunst-stack-tag:network.reconnect"]
 
 [bluetooth.disconnect]
@@ -150,7 +137,6 @@ appname = "Bluetooth"
 summary = "Отключен"
 body = "Bluetooth устройство отключено"
 icon = "bluetooth-disabled"
-timeout = 3000
 hints = ["transient", "category:bluetooth", "string:x-dunst-stack-tag:bluetooth.disconnect"]
 
 [bluetooth.reconnect]
@@ -159,5 +145,4 @@ appname = "Bluetooth"
 summary = "Подключен"
 body = "Bluetooth устройство подключено"
 icon = "bluetooth-active"
-timeout = 3000
 hints = ["transient", "category:bluetooth", "string:x-dunst-stack-tag:bluetooth.reconnect"]
