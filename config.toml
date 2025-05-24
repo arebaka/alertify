@@ -38,7 +38,9 @@ icon = "drive-harddisk"
 timeout = 5000
 hints = ["category:storage", "string:x-dunst-stack-tag:storage.low"]
 
-[devices.usb.connect]
+[[device]]
+action = "add"
+subsystem = "usb"
 urgency = "low"
 appname = "USB"
 summary = "Устройство подключено"
@@ -47,7 +49,9 @@ icon = "media-flash"
 timeout = 3000
 hints = ["transient", "category:usb", "string:x-dunst-stack-tag:usb.connect"]
 
-[devices.usb.disconnect]
+[[device]]
+action = "remove"
+subsystem = "usb"
 urgency = "low"
 appname = "USB"
 summary = "Устройство отключено"
@@ -56,7 +60,9 @@ icon = "media-flash"
 timeout = 3000
 hints = ["transient", "category:usb", "string:x-dunst-stack-tag:usb.disconnect"]
 
-[devices.hdmi.connect]
+[[device]]
+action = "add"
+subsystem = "drm"
 urgency = "low"
 appname = "HDMI"
 summary = "Подключён"
@@ -65,7 +71,9 @@ icon = "video-display"
 timeout = 3000
 hints = ["transient", "category:hdmi", "string:x-dunst-stack-tag:hdmi.connect"]
 
-[devices.hdmi.disconnect]
+[[device]]
+action = "remove"
+subsystem = "drm"
 urgency = "low"
 appname = "HDMI"
 summary = "Отключён"
@@ -74,7 +82,9 @@ icon = "video-display"
 timeout = 3000
 hints = ["transient", "category:hdmi", "string:x-dunst-stack-tag:hdmi.disconnect"]
 
-[devices.jack.connect]
+[[device]]
+action = "add"
+subsystem = "sound"
 urgency = "low"
 appname = "Jack 3.5"
 summary = "Аудиоразъём подключён"
@@ -83,7 +93,9 @@ icon = "audio-headphones"
 timeout = 3000
 hints = ["transient", "category:audio", "string:x-dunst-stack-tag:audio.connect"]
 
-[devices.jack.disconnect]
+[[device]]
+action = "remove"
+subsystem = "sound"
 urgency = "low"
 appname = "Jack 3.5"
 summary = "Аудиоразъём отключён"

@@ -15,7 +15,7 @@ use zbus::proxy::SignalStream;
 use zbus::fdo::{PropertiesProxy, PropertiesChanged};
 use zbus::zvariant::{Value, OwnedValue};
 use zbus_names::InterfaceName;
-use udev::{MonitorBuilder, Event};
+use tokio_udev::{MonitorBuilder, Event, EventType, AsyncMonitorSocket};
 use std::os::fd::AsRawFd;
 use tokio::io::unix::AsyncFd;
 use tokio::process::Command;
@@ -32,7 +32,8 @@ struct Config {
     memory: Vec<MemoryCase>,
     #[serde(default)]
     storage: Vec<StorageCase>,
-    devices: DevicesConfig,
+    #[serde(default)]
+    device: Vec<DeviceCase>,
     network: NetworkConfig,
     bluetooth: BluetoothConfig,
 }
@@ -76,7 +77,7 @@ impl Default for BatteryCase {
 }
 
 impl BatteryCase {
-    fn to_message(self) -> Message {
+    fn notify(self) {
         Message {
             urgency: self.urgency,
             appname: self.appname,
@@ -86,7 +87,7 @@ impl BatteryCase {
             timeout: self.timeout,
             hints: self.hints,
             exec: self.exec,
-        }
+        }.notify()
     }
 }
 
@@ -129,7 +130,7 @@ impl Default for PowerStatusConfig {
 }
 
 impl PowerStatusConfig {
-    fn to_message(self) -> Message {
+    fn notify(self) {
         Message {
             urgency: self.urgency,
             appname: self.appname,
@@ -139,7 +140,7 @@ impl PowerStatusConfig {
             timeout: self.timeout,
             hints: self.hints,
             exec: self.exec,
-        }
+        }.notify()
     }
 }
 
@@ -182,7 +183,7 @@ impl Default for MemoryCase {
 }
 
 impl MemoryCase {
-    fn to_message(self) -> Message {
+    fn notify(self) {
         Message {
             urgency: self.urgency,
             appname: self.appname,
@@ -192,7 +193,7 @@ impl MemoryCase {
             timeout: self.timeout,
             hints: self.hints,
             exec: self.exec,
-        }
+        }.notify()
     }
 }
 
@@ -235,7 +236,7 @@ impl Default for StorageCase {
 }
 
 impl StorageCase {
-    fn to_message(self) -> Message {
+    fn notify(self) {
         Message {
             urgency: self.urgency,
             appname: self.appname,
@@ -245,21 +246,65 @@ impl StorageCase {
             timeout: self.timeout,
             hints: self.hints,
             exec: self.exec,
-        }
+        }.notify()
     }
 }
 
 #[derive(Debug, Deserialize, Clone)]
-struct DevicesConfig {
-    usb: DeviceConfig,
-    hdmi: DeviceConfig,
-    jack: DeviceConfig,
+struct DeviceCase {
+    action: String,
+    initialized: Option<bool>,
+    subsystem: Option<String>,
+    sysname: Option<String>,
+    sysnum: Option<i32>,
+    devtype: Option<String>,
+    driver: Option<String>,
+    urgency: String,
+    appname: String,
+    summary: String,
+    body: String,
+    icon: String,
+    timeout: u32,
+    hints: HashSet<MyHint>,
+    #[serde(default)]
+    exec: Option<String>,
 }
 
-#[derive(Debug, Deserialize, Clone)]
-struct DeviceConfig {
-    connect: Message,
-    disconnect: Message,
+impl Default for DeviceCase {
+    fn default() -> Self {
+        Self {
+            action: "add".to_string(),
+            initialized: None,
+            subsystem: None,
+            sysname: None,
+            sysnum: None,
+            devtype: None,
+            driver: None,
+            urgency: "normal".to_string(),
+            appname: "Device".to_string(),
+            summary: "".to_string(),
+            body: "".to_string(),
+            icon: "".to_string(),
+            timeout: 0,
+            hints: vec![].into_iter().collect(),
+            exec: None,
+        }
+    }
+}
+
+impl DeviceCase {
+    fn notify(self) {
+        Message {
+            urgency: self.urgency,
+            appname: self.appname,
+            summary: self.summary,
+            body: self.body,
+            icon: self.icon,
+            timeout: self.timeout,
+            hints: self.hints,
+            exec: self.exec,
+        }.notify()
+    }
 }
 
 #[derive(Debug, Deserialize, Clone)]
@@ -317,7 +362,7 @@ struct Message {
 }
 
 impl Message {
-    fn notify(self) {
+    fn notify(&self) {
         let urgency = parse_urgency(&self.urgency);
         let mut notification = Notification::new();
 
@@ -346,13 +391,12 @@ fn parse_urgency(s: &str) -> Urgency {
     }
 }
 
-async fn maybe_run_exec(exec: &Option<String>) -> Result<()> {
+async fn maybe_exec(exec: &Option<String>) -> Result<()> {
     if let Some(cmdline) = exec {
         let status = Command::new("sh")
             .arg("-c")
             .arg(cmdline)
-            .status()
-            .await?;
+            .spawn();
     }
     Ok(())
 }
@@ -392,9 +436,9 @@ async fn monitor_battery(cfg: Vec<BatteryCase>, sent: Arc<Mutex<HashSet<String>>
 
             if should_notify {
                 let case_clone = case.clone();
-                maybe_run_exec(&case_clone.exec).await?;
+                maybe_exec(&case_clone.exec).await?;
                 tokio::task::spawn_blocking(move || {
-                    case_clone.to_message().notify();
+                    case_clone.notify();
                 }).await?;
             }
         }
@@ -432,9 +476,9 @@ async fn monitor_memory(cfg: Vec<MemoryCase>, sent: Arc<Mutex<HashSet<String>>>)
 
             if should_notify {
                 let case_clone = case.clone();
-                maybe_run_exec(&case_clone.exec).await?;
+                maybe_exec(&case_clone.exec).await?;
                 tokio::task::spawn_blocking(move || {
-                    case_clone.to_message().notify();
+                    case_clone.notify();
                 }).await?;
             }
         }
@@ -471,9 +515,9 @@ async fn monitor_storage(cfg: Vec<StorageCase>, sent: Arc<Mutex<HashSet<String>>
 
                 if should_notify {
                     let case_clone = case.clone();
-                    maybe_run_exec(&case_clone.exec).await?;
+                    maybe_exec(&case_clone.exec).await?;
                     tokio::task::spawn_blocking(move || {
-                        case_clone.to_message().notify();
+                        case_clone.notify();
                     }).await?;
                 }
             }
@@ -481,6 +525,73 @@ async fn monitor_storage(cfg: Vec<StorageCase>, sent: Arc<Mutex<HashSet<String>>
 
         tokio::time::sleep(std::time::Duration::from_secs(60)).await;
     }
+}
+
+async fn listen_udev(cases: Vec<DeviceCase>, sent: Arc<Mutex<HashSet<String>>>) -> Result<()> {
+    let ALLOW_SUBSYSTEMS = [
+        "usb", "block", "net", "input", "sound", "drm", "tty", "power_supply", "video4linux"
+    ];
+
+    let mut monitor = MonitorBuilder::new()?;
+    for subsys in ALLOW_SUBSYSTEMS {
+        monitor = monitor.match_subsystem(subsys)?;
+    }
+    let mut socket = AsyncMonitorSocket::new(monitor.listen()?)?;
+
+    while let Some(Ok(event)) = socket.next().await {
+        let initialized = event.is_initialized();
+        let subsystem   = event.subsystem().and_then(|s| s.to_str().map(str::to_string));
+        let sysname     = event.sysname().to_str().map(str::to_string);
+        let sysnum      = event.sysnum().map(|n| n as i32);
+        let devtype     = event.devtype().and_then(|s| s.to_str().map(str::to_string));
+        let driver      = event.driver().and_then(|s| s.to_str().map(str::to_string));
+
+        let action = match event.event_type() {
+            EventType::Add => "add",
+            EventType::Remove => "remove",
+            EventType::Bind => "bind",
+            EventType::Unbind => "unbind",
+            _ => continue,
+        };
+
+        for case in cases.iter().filter(|case| {
+            case.action == action
+            && case.initialized.map_or(true, |v| v == initialized)
+            && match (&case.subsystem, &subsystem) {
+                (None, _) => true,
+                (_, None) => true,
+                (Some(expect), Some(actual)) if expect == actual => true,
+                _ => false,
+            }
+            && match (&case.sysname, &sysname) {
+                (None, _) => true,
+                (_, None) => true,
+                (Some(expect), Some(actual)) if expect == actual => true,
+                _ => false,
+            }
+            && case.sysnum.map_or(true, |v| sysnum.map_or(false, |n| n == v))
+            && match (&case.devtype, &devtype) {
+                (None, _) => true,
+                (_, None) => true,
+                (Some(expect), Some(actual)) if expect == actual => true,
+                _ => false,
+            }
+            && match (&case.driver, &driver) {
+                (None, _) => true,
+                (_, None) => true,
+                (Some(expect), Some(actual)) if expect == actual => true,
+                _ => false,
+            }
+        }) {
+            let case_clone = case.clone();
+            maybe_exec(&case_clone.exec).await?;
+            tokio::task::spawn_blocking(move || {
+                case_clone.notify();
+            }).await?;
+        }
+    }
+
+    Ok(())
 }
 
 #[tokio::main]
@@ -496,10 +607,10 @@ async fn main() -> Result<()> {
     handles.push(tokio::spawn(monitor_memory(cfg.memory.clone(), sent.clone())));
     handles.push(tokio::spawn(monitor_storage(cfg.storage.clone(), sent.clone())));
 /*
-    handles.push(tokio::spawn(monitor_udev(cfg.devices.clone(), sent.clone())));
     handles.push(tokio::spawn(monitor_network(cfg.network.clone(), sent.clone())));
     handles.push(tokio::spawn(monitor_bluetooth(cfg.bluetooth.clone(), sent.clone())));
 */
+    listen_udev(cfg.device.clone(), sent.clone()).await;
     for h in handles {
         let _ = h.await;
     }
