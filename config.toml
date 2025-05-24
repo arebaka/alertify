@@ -2,7 +2,7 @@
 level = 20
 urgency = "critical"
 appname = "Низкий заряд батареи"
-summary = "Уровень заряда упал ниже 20%"
+summary = "Уровень заряда упал до {left_percent}%!"
 body = ""
 icon = "battery-caution"
 timeout = 0
@@ -11,8 +11,8 @@ hints = ["transient", "category:battery", "string:x-dunst-stack-tag:battery.low"
 [[battery]]
 level = 5
 urgency = "critical"
-appname = "Критический уровень заряда"
-summary = "Заряд батареи ниже 5%!"
+appname = "Критический уровень заряда батареи"
+summary = "Уровень заряда батареи упал до {left_percent}%!"
 body = ""
 icon = "battery-empty"
 timeout = 0
@@ -22,8 +22,8 @@ hints = ["transient", "category:battery", "string:x-dunst-stack-tag:battery.low"
 level = 90.0
 urgency = "normal"
 appname = "Высокое использование ОЗУ"
-summary = "ОЗУ используется на 90%"
-body = ""
+summary = "ОЗУ используется на {used_percent}%!"
+body = "Всего доступно {total}, осталось {left}."
 icon = "dialog-warning"
 timeout = 5000
 hints = ["transient", "category:memory", "string:x-dunst-stack-tag:memory.high"]
@@ -32,30 +32,30 @@ hints = ["transient", "category:memory", "string:x-dunst-stack-tag:memory.high"]
 level = 95.0
 urgency = "normal"
 appname = "Мало свободного места"
-summary = "Доступно менее 5% дискового пространства"
-body = ""
+summary = "Доступно менее {left_percent}% дискового пространства!"
+body = "На устройстве {name} всего доступно {total}, осталось {left}."
 icon = "drive-harddisk"
 timeout = 5000
 hints = ["category:storage", "string:x-dunst-stack-tag:storage.low"]
 
 [[device]]
-action = "add"
+action = "bind"
 subsystem = "usb"
 urgency = "low"
 appname = "USB"
 summary = "Устройство подключено"
-body = "Подключено новое USB устройство"
+body = "Подключено новое USB устройство: {devpath}"
 icon = "media-flash"
 timeout = 3000
 hints = ["transient", "category:usb", "string:x-dunst-stack-tag:usb.connect"]
 
 [[device]]
-action = "remove"
+action = "unbind"
 subsystem = "usb"
 urgency = "low"
 appname = "USB"
 summary = "Устройство отключено"
-body = "USB устройство было отключено"
+body = "USB устройство было отключено: {devpath}"
 icon = "media-flash"
 timeout = 3000
 hints = ["transient", "category:usb", "string:x-dunst-stack-tag:usb.disconnect"]
@@ -104,6 +104,28 @@ icon = "audio-headphones"
 timeout = 3000
 hints = ["transient", "category:audio", "string:x-dunst-stack-tag:audio.disconnect"]
 
+[[device]]
+action = "add"
+subsystem = "power_supply"
+urgency = "low"
+appname = "Питание"
+summary = "AC кабель подключён"
+body = ""
+icon = "ac-adapter"
+timeout = 3000
+hints = ["transient", "category:usb", "string:x-dunst-stack-tag:usb.connect"]
+
+[[device]]
+action = "remove"
+subsystem = "power_supply"
+urgency = "low"
+appname = "Питание"
+summary = "AC кабель отключён"
+body = ""
+icon = "ac-adapter"
+timeout = 3000
+hints = ["transient", "category:usb", "string:x-dunst-stack-tag:usb.disconnect"]
+
 [network.disconnect]
 urgency = "critical"
 appname = "Сеть"
@@ -139,4 +161,3 @@ body = "Bluetooth устройство подключено"
 icon = "bluetooth-active"
 timeout = 3000
 hints = ["transient", "category:bluetooth", "string:x-dunst-stack-tag:bluetooth.reconnect"]
-
