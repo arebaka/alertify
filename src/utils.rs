@@ -13,8 +13,8 @@ pub fn parse_urgency(s: &str) -> Urgency {
 pub fn maybe_exec(exec: Option<&String>) {
     if let Some(cmdline) = exec {
         let _ = Command::new("sh")
-			.arg("-c")
-			.arg(cmdline)
-			.spawn();
+            .arg("-c")
+            .arg(cmdline)
+            .spawn();
     }
 }

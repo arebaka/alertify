@@ -1,4 +1,6 @@
 use serde::Deserialize;
+use std::{env, fs, path::PathBuf};
+use anyhow::{Context, Result};
 
 use crate::message::Message;
 
@@ -150,4 +152,35 @@ pub struct NetworkConfig {
 pub struct BluetoothConfig {
     pub disconnect: Message,
     pub reconnect: Message,
+}
+
+fn get_config_path() -> Result<PathBuf> {
+    let xdg_config_home = env::var_os("XDG_CONFIG_HOME")
+        .map(PathBuf::from)
+        .unwrap_or_else(|| {
+            dirs::home_dir()
+                .map(|home| home.join(".config"))
+                .expect("Could not determine home directory")
+        });
+
+    let path = xdg_config_home.join("alertify").join("config.toml");
+
+    if path.exists() {
+        Ok(path)
+    } else {
+        Err(anyhow::anyhow!("Configuration file not found: {:?}", path))
+    }
+}
+
+pub fn get_config() -> Result<Config> {
+    let config_path = get_config_path()
+        .context("Failed to locate configuration file")?;
+
+    let config_raw = fs::read_to_string(&config_path)
+        .with_context(|| format!("Failed to read config file: {}", config_path.display()))?;
+
+    let config: Config = toml::from_str(&config_raw)
+        .context("Failed to parse configuration file")?;
+
+    Ok(config)
 }
