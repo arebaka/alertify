@@ -1,10 +1,10 @@
 # Maintainer: arelive <me@are.moe>
 pkgname=alertify
-pkgver=0.1.0
+pkgver=0.1.1
 pkgrel=1
 pkgdesc="Notification tool for battery, memory, storage, devices and power supply state monitoring on Linux"
 arch=('x86_64')
-url="https://github.com/arelive/alertify"
+url="https://github.com/arebaka/alertify"
 license=('MIT')
 depends=('gcc-libs')
 makedepends=('rust' 'cargo')

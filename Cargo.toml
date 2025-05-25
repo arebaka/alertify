@@ -1,11 +1,11 @@
 [package]
 name = "alertify"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 authors = ["arelive <me@are.moe>"]
 description = "Notification tool for battery, memory, storage, devices and power supply state monitoring on Linux"
 license = "MIT"
-repository = "https://github.com/arelive/alertify"
+repository = "https://github.com/arebaka/alertify"
 
 [dependencies]
 anyhow = "1.0"

@@ -23,6 +23,6 @@
 You can build **alertify** from source using Cargo:
 
 ```bash
-git clone https://github.com/arelive/alertify.git
+git clone https://github.com/arebaka/alertify.git
 cd alertify
 cargo build --release
