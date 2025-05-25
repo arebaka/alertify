@@ -1,0 +1,47 @@
+# Build
+target
+
+# Lock
+Cargo.lock
+
+# Runtime data
+*.pid
+*.seed
+*.pid.lock
+
+# Temporary
+*~
+.netrwhist
+
+# Cache
+.cache
+
+# MacOS
+.DS_Store
+
+# Visual Studio Code
+.vscode
+.history
+.vscode-test
+*.vsix
+
+# JetBrains
+.idea
+*.iws
+.idea_modules
+
+# Sublime Text
+*.tmlanguage.cache
+*.tmPreferences.cache
+*.stTheme.cache
+*.sublime-workspace
+
+# Vim
+[._]*.s[a-v][a-z]
+[._]*.sw[a-p]
+[._]s[a-rt-v][a-z]
+[._]ss[a-gi-z]
+[._]sw[a-p]
+Session.vim
+Sessionx.vim
+[._]*.un~
