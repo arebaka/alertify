@@ -1,0 +1,76 @@
+[[battery]]
+level = 20
+urgency = "critical"
+appname = "Low Battery"
+summary = "Battery level dropped to {left_percent}%!"
+body = ""
+icon = "battery-caution"
+hints = ["transient", "category:battery", "string:x-dunst-stack-tag:battery.low"]
+
+[[battery]]
+level = 5
+urgency = "critical"
+appname = "Critical Battery Level"
+summary = "Battery level dropped to {left_percent}%!"
+body = ""
+icon = "battery-empty"
+timeout = 0
+hints = ["transient", "category:battery", "string:x-dunst-stack-tag:battery.low"]
+
+[[memory]]
+level = 90.0
+urgency = "normal"
+appname = "High RAM Usage"
+summary = "RAM usage is at {used_percent}%!"
+body = "Total available: {total}, remaining: {left}."
+icon = "dialog-warning"
+hints = ["transient", "category:memory", "string:x-dunst-stack-tag:memory.high"]
+
+[[storage]]
+level = 95.0
+urgency = "normal"
+appname = "Low Disk Space"
+summary = "Less than {left_percent}% disk space available!"
+body = "Device {name} total: {total}, left: {left}."
+icon = "drive-harddisk"
+hints = ["category:storage", "string:x-dunst-stack-tag:storage.low"]
+
+[[device]]
+action = "bind"
+subsystem = "usb"
+urgency = "low"
+appname = "USB"
+summary = "Device Connected"
+body = "A new USB device was connected: {devpath}"
+icon = "media-flash"
+hints = ["transient", "category:usb", "string:x-dunst-stack-tag:usb.connect"]
+
+[[device]]
+action = "unbind"
+subsystem = "usb"
+urgency = "low"
+appname = "USB"
+summary = "Device Disconnected"
+body = "USB device was disconnected: {devpath}"
+icon = "media-flash"
+hints = ["transient", "category:usb", "string:x-dunst-stack-tag:usb.disconnect"]
+
+[[power_supply]]
+name = "AC"
+online = "1"
+urgency = "low"
+appname = "Power"
+summary = "Power cable connected"
+body = ""
+icon = "ac-adapter"
+hints = ["transient", "category:power-supply", "string:x-dunst-stack-tag:power-supply"]
+
+[[power_supply]]
+name = "AC"
+online = "0"
+urgency = "low"
+appname = "Power"
+summary = "Power cable disconnected"
+body = ""
+icon = "ac-adapter"
+hints = ["transient", "category:power-supply", "string:x-dunst-stack-tag:power-supply"]
