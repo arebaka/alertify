@@ -1,9 +1,6 @@
 # Build
 target
 
-# Lock
-Cargo.lock
-
 # Runtime data
 *.pid
 *.seed
