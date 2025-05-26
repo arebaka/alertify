@@ -106,7 +106,7 @@ pub async fn listen_udev(rules: Config, sent: Arc<Mutex<HashSet<String>>>) -> Re
     Ok(())
 }
 
-async fn handle_power_supply_change(event: Device, rules: Vec<PowerStatusRule>, sent: Arc<Mutex<HashSet<String>>>) -> Result<()> {
+async fn handle_power_supply_change(event: Device, rules: Vec<PowerStatusRule>, _sent: Arc<Mutex<HashSet<String>>>) -> Result<()> {
     let name = event
         .property_value("POWER_SUPPLY_NAME")
         .and_then(|s| s.to_str())

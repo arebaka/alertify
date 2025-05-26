@@ -18,8 +18,6 @@ pub struct Config {
     pub storage: Vec<StorageRule>,
     #[serde(default)]
     pub device: Vec<DeviceRule>,
-    pub network: NetworkConfig,
-    pub bluetooth: BluetoothConfig,
 }
 
 #[derive(Debug, Deserialize, Clone)]
@@ -142,18 +140,6 @@ impl Default for PowerStatusRule {
             },
         }
     }
-}
-
-#[derive(Debug, Deserialize, Clone)]
-pub struct NetworkConfig {
-    pub disconnect: Message,
-    pub reconnect: Message,
-}
-
-#[derive(Debug, Deserialize, Clone)]
-pub struct BluetoothConfig {
-    pub disconnect: Message,
-    pub reconnect: Message,
 }
 
 fn get_config_path() -> Result<PathBuf> {

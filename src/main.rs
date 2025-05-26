@@ -28,8 +28,6 @@ async fn main() -> Result<()> {
         spawn(monitor_battery(config.battery.clone(), sent.clone())),
         spawn(monitor_memory(config.memory.clone(), sent.clone())),
         spawn(monitor_storage(config.storage.clone(), sent.clone())),
-        // spawn(monitor_network(config.network.clone(), sent.clone())),
-        // spawn(monitor_bluetooth(config.bluetooth.clone(), sent.clone())),
     ];
 
     listen_udev(config, sent.clone()).await.unwrap();

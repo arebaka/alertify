@@ -55,7 +55,7 @@ impl Message {
 
 #[derive(Debug, Deserialize, Clone, PartialEq, Eq, Hash)]
 #[serde(transparent)]
-struct MyHint(String);
+pub struct MyHint(String);
 
 impl From<MyHint> for Hint {
     fn from(hint: MyHint) -> Hint {
