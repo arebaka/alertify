@@ -178,8 +178,8 @@ You can use dynamic placeholders in `appname`, `summary` and `body` fields:
 | Field                 | Sections                                              | Description                                           |
 | --------------------- | ----------------------------------------------------- | ----------------------------------------------------- |
 | `{level}`             | `[[battery]]`, `[[cpu]]`, `[[memory]]`, `[[storage]]` | Current threshold level (percentage or numeric value) |
-| `{max_freq}`          | `[[cpu]]`                                             | Maximum clock frequency of one core                   |
-| `{avg_freq}`          | `[[cpu]]`                                             | average clokc frequency of all cpu cores              |
+| `{max_freq}`          | `[[cpu]]`                                             | Maximum clock frequency in KHz of one core            |
+| `{avg_freq}`          | `[[cpu]]`                                             | average clokc frequency in KHz of all cpu cores       |
 | `{left_percent_full}` | `[[battery]]`, `[[memory]]`, `[[storage]]`            | Remaining percent with fractional precision           |
 | `{left_percent}`      | `[[battery]]`, `[[memory]]`, `[[storage]]`            | Remaining percent rounded to integer                  |
 | `{used_percent_full}` | `[[battery]]`, `[[memory]]`, `[[storage]]`            | Used percent with fractional precision                |
