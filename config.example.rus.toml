@@ -17,6 +17,15 @@ icon = "battery-empty"
 timeout = 0
 hints = ["transient", "category:battery", "string:x-dunst-stack-tag:battery.low"]
 
+[[cpu]]
+level = 90.0
+urgency = "normal"
+appname = "Высокое использование процессора"
+summary = "ЦПУ используется на {used_percent}%!"
+body = "Максимальная тактовая частота: {max_freq} КГц, в среднем: {avg_freq} КГц."
+icon = "dialog-warning"
+hints = ["transient", "category:cpu", "string:x-dunst-stack-tag:cpu.high"]
+
 [[memory]]
 level = 90.0
 urgency = "normal"

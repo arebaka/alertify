@@ -17,6 +17,15 @@ icon = "battery-empty"
 timeout = 0
 hints = ["transient", "category:battery", "string:x-dunst-stack-tag:battery.low"]
 
+[[cpu]]
+level = 90.0
+urgency = "normal"
+appname = "High CPU Usage"
+summary = "CPU usage is at {used_percent}%!"
+body = "Maximum clock frequency: {max_freq} KHz, average: {avg_freq} KHz."
+icon = "dialog-warning"
+hints = ["transient", "category:cpu", "string:x-dunst-stack-tag:cpu.high"]
+
 [[memory]]
 level = 90.0
 urgency = "normal"

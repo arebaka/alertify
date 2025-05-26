@@ -13,6 +13,8 @@ pub struct Config {
     #[serde(default)]
     pub power_supply: Vec<PowerStatusRule>,
     #[serde(default)]
+    pub cpu: Vec<CPURule>,
+    #[serde(default)]
     pub memory: Vec<MemoryRule>,
     #[serde(default)]
     pub storage: Vec<StorageRule>,
@@ -35,6 +37,27 @@ impl Default for BatteryRule {
             message: Message {
                 urgency: "critical".to_string(),
                 appname: "Battery".to_string(),
+                ..Default::default()
+            },
+        }
+    }
+}
+
+#[derive(Debug, Deserialize, Clone)]
+#[serde(default)]
+pub struct CPURule {
+    pub level: f32,
+    #[serde(flatten)]
+    pub message: Message,
+}
+
+impl Default for CPURule {
+    fn default() -> Self {
+        Self {
+            level: 90.0,
+            message: Message {
+                urgency: "normal".to_string(),
+                appname: "CPU".to_string(),
                 ..Default::default()
             },
         }

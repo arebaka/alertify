@@ -1,6 +1,7 @@
 mod message;
 mod config;
 mod battery;
+mod cpu;
 mod memory;
 mod storage;
 mod udev;
@@ -14,6 +15,7 @@ use tokio::spawn;
 use crate::{
     config::get_config,
     battery::monitor_battery,
+    cpu::monitor_cpu,
     memory::monitor_memory,
     storage::monitor_storage,
     udev::listen_udev,
@@ -26,6 +28,7 @@ async fn main() -> Result<()> {
     let sent = Arc::new(Mutex::new(HashSet::new()));
     let handles = vec![
         spawn(monitor_battery(config.battery.clone(), sent.clone())),
+        spawn(monitor_cpu(config.cpu.clone(), sent.clone())),
         spawn(monitor_memory(config.memory.clone(), sent.clone())),
         spawn(monitor_storage(config.storage.clone(), sent.clone())),
     ];

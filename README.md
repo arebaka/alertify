@@ -8,7 +8,7 @@
 ## Features
 
 - Battery level monitoring with alerts
-- Memory and storage usage notifications
+- CPU, memory and storage usage notifications
 - Device connection and disconnection events (via udev)
 - Monitoring of power supply status changing
 - Configurable via a TOML configuration file
@@ -63,6 +63,15 @@ body = ""
 icon = "battery-empty"
 timeout = 0
 hints = ["transient", "category:battery", "string:x-dunst-stack-tag:battery.low"]
+
+[[cpu]]
+level = 90.0
+urgency = "normal"
+appname = "High CPU Usage"
+summary = "CPU usage is at {used_percent}%!"
+body = "Maximum clock frequency: {max_freq} KHz, average: {avg_freq} KHz."
+icon = "dialog-warning"
+hints = ["transient", "category:cpu", "string:x-dunst-stack-tag:cpu.high"]
 
 [[memory]]
 level = 90.0
@@ -128,6 +137,7 @@ hints = ["transient", "category:power-supply", "string:x-dunst-stack-tag:power-s
 Each section type corresponds to a system resource or event and accepts multiple entries:
 
 - `[[battery]]`: Notifications for low battery levels
+- `[[cpu]]`: CPU usage alerts
 - `[[memory]]`: RAM usage alerts
 - `[[storage]]`: Low disk space warnings
 - `[[device]]`: USB or other device events (via udev)
@@ -147,47 +157,49 @@ Each section type corresponds to a system resource or event and accepts multiple
 
 ### Section fields
 
-| Field         | Type    | Sections                                   | Default value                                 | Description                                                             |
-| ------------- | ------- | ------------------------------------------ | --------------------------------------------- |------------------------------------------------------------------------ |
-| `level`       | Number  | `[[battery]]`, `[[memory]]`, `[[storage]]` | `20` (battery), `90` (memory), `95` (storage) | Threshold value (e.g. percent for battery/memory/storage usage)         |
-| `action`      | String  | `[[device]]`                               | `"add"`                                       | Udev device event type: `add`, `remove`, `bind`, `unbind`, `change`     |
-| `initialized` | Boolean | `[[device]]`                               | None                                          | Whether the device is already initialized when matching                 |
-| `subsystem`   | String  | `[[device]]`                               | None                                          | Device subsystem to match, e.g. `"usb"`, `"block"`, `"net"`             |
-| `sysname`     | String  | `[[device]]`                               | None                                          | Match specific system name (e.g. `"sda1"`)                              |
-| `sysnum`      | Integer | `[[device]]`                               | None                                          | Match specific system number if needed                                  |
-| `devtype`     | String  | `[[device]]`                               | None                                          | Match the device type, e.g. `"usb_device"`, `"partition"`               |
-| `driver`      | String  | `[[device]]`                               | None                                          | Match the kernel driver, e.g. `"usb-storage"`.                          |
-| `name`        | String  | `[[power_supply]]`                         | None                                          | Power supply device name, e.g. `"AC"`, `"BAT0"`                         |
-| `supply_type` | String  | `[[power_supply]]`                         | None                                          | Filter for type of power supply, e.g. `"Mains"`, `"Battery"`            |
-| `online`      | String  | `[[power_supply]]`                         | None                                          | `"1"` when connected, `"0"` when disconnected                           |
+| Field         | Type    | Sections                                              | Default value                                      | Description                                                             |
+| ------------- | ------- | ----------------------------------------------------- | -------------------------------------------------- |------------------------------------------------------------------------ |
+| `level`       | Number  | `[[battery]]`, `[[cpu]]`, `[[memory]]`, `[[storage]]` | `20` (battery), `90` (cpu, memory), `95` (storage) | Threshold value (e.g. percent for battery/memory/storage usage)         |
+| `action`      | String  | `[[device]]`                                          | `"add"`                                            | Udev device event type: `add`, `remove`, `bind`, `unbind`, `change`     |
+| `initialized` | Boolean | `[[device]]`                                          | None                                               | Whether the device is already initialized when matching                 |
+| `subsystem`   | String  | `[[device]]`                                          | None                                               | Device subsystem to match, e.g. `"usb"`, `"block"`, `"net"`             |
+| `sysname`     | String  | `[[device]]`                                          | None                                               | Match specific system name (e.g. `"sda1"`)                              |
+| `sysnum`      | Integer | `[[device]]`                                          | None                                               | Match specific system number if needed                                  |
+| `devtype`     | String  | `[[device]]`                                          | None                                               | Match the device type, e.g. `"usb_device"`, `"partition"`               |
+| `driver`      | String  | `[[device]]`                                          | None                                               | Match the kernel driver, e.g. `"usb-storage"`.                          |
+| `name`        | String  | `[[power_supply]]`                                    | None                                               | Power supply device name, e.g. `"AC"`, `"BAT0"`                         |
+| `supply_type` | String  | `[[power_supply]]`                                    | None                                               | Filter for type of power supply, e.g. `"Mains"`, `"Battery"`            |
+| `online`      | String  | `[[power_supply]]`                                    | None                                               | `"1"` when connected, `"0"` when disconnected                           |
 
 ### Supported Placeholders
 
 You can use dynamic placeholders in `appname`, `summary` and `body` fields:
 
-| Field                 | Sections                                   | Description                                           |
-| --------------------- | ------------------------------------------ | ----------------------------------------------------- |
-| `{level}`             | `[[battery]]`, `[[memory]]`, `[[storage]]` | Current threshold level (percentage or numeric value) |
-| `{left_percent_full}` | `[[battery]]`, `[[memory]]`, `[[storage]]` | Remaining percent with fractional precision           |
-| `{left_percent}`      | `[[battery]]`, `[[memory]]`, `[[storage]]` | Remaining percent rounded to integer                  |
-| `{used_percent_full}` | `[[battery]]`, `[[memory]]`, `[[storage]]` | Used percent with fractional precision                |
-| `{used_percent}`      | `[[battery]]`, `[[memory]]`, `[[storage]]` | Used percent rounded to integer                       |
-| `{total_bytes}`       | `[[memory]]`, `[[storage]]`                | Total memory or storage size in bytes                 |
-| `{total}`             | `[[memory]]`, `[[storage]]`                | Total size in human-readable format, e.g. `2.5 GB`    |
-| `{used_bytes}`        | `[[memory]]`, `[[storage]]`                | Used memory or storage in bytes                       |
-| `{used}`              | `[[memory]]`, `[[storage]]`                | Used memory or storage in human-readable format       |
-| `{left_bytes}`        | `[[memory]]`, `[[storage]]`                | Remaining memory or storage in bytes                  |
-| `{left}`              | `[[memory]]`, `[[storage]]`                | Remaining memory or storage in human-readable format  |
-| `{kind}`              | `[[storage]]`                              | Storage kind, e.g. `disk`, `partition`                |
-| `{name}`              | `[[storage]]`                              | Device name, e.g. `sda1`                              |
-| `{fs}`                | `[[storage]]`                              | Filesystem type, e.g. `ext4`, `btrfs`                 |
-| `{mount}`             | `[[storage]]`                              | Mount point, e.g. `/home`                             |
-| `{subsystem}`         | `[[device]] `                              | Udev subsystem, e.g. `usb`, `net`, `block`            |
-| `{sysname}`           | `[[device]] `                              | System name, e.g. `sda`, `event4`                     |
-| `{sysnum}`            | `[[device]] `                              | System number                                         |
-| `{devtype}`           | `[[device]] `                              | Device type, e.g. `usb_device`, `partition`           |
-| `{driver}`            | `[[device]] `                              | Kernel driver name, e.g. `usb-storage`                |
-| `{seq_num}`           | `[[device]] `                              | Kernel event sequence number                          |
-| `{syspath}`           | `[[device]] `                              | Full sysfs path of the device                         |
-| `{devpath}`           | `[[device]] `                              | Udev device path, e.g. `/devices/.../usb1`            |
-| `{devnode}`           | `[[device]] `                              | Device node path, e.g. `/dev/sda`                     |
+| Field                 | Sections                                              | Description                                           |
+| --------------------- | ----------------------------------------------------- | ----------------------------------------------------- |
+| `{level}`             | `[[battery]]`, `[[cpu]]`, `[[memory]]`, `[[storage]]` | Current threshold level (percentage or numeric value) |
+| `{max_freq}`          | `[[cpu]]`                                             | Maximum clock frequency of one core                   |
+| `{avg_freq}`          | `[[cpu]]`                                             | average clokc frequency of all cpu cores              |
+| `{left_percent_full}` | `[[battery]]`, `[[memory]]`, `[[storage]]`            | Remaining percent with fractional precision           |
+| `{left_percent}`      | `[[battery]]`, `[[memory]]`, `[[storage]]`            | Remaining percent rounded to integer                  |
+| `{used_percent_full}` | `[[battery]]`, `[[memory]]`, `[[storage]]`            | Used percent with fractional precision                |
+| `{used_percent}`      | `[[battery]]`, `[[memory]]`, `[[storage]]`            | Used percent rounded to integer                       |
+| `{total_bytes}`       | `[[memory]]`, `[[storage]]`                           | Total memory or storage size in bytes                 |
+| `{total}`             | `[[memory]]`, `[[storage]]`                           | Total size in human-readable format, e.g. `2.5 GB`    |
+| `{used_bytes}`        | `[[memory]]`, `[[storage]]`                           | Used memory or storage in bytes                       |
+| `{used}`              | `[[memory]]`, `[[storage]]`                           | Used memory or storage in human-readable format       |
+| `{left_bytes}`        | `[[memory]]`, `[[storage]]`                           | Remaining memory or storage in bytes                  |
+| `{left}`              | `[[memory]]`, `[[storage]]`                           | Remaining memory or storage in human-readable format  |
+| `{kind}`              | `[[storage]]`                                         | Storage kind, e.g. `disk`, `partition`                |
+| `{name}`              | `[[storage]]`                                         | Device name, e.g. `sda1`                              |
+| `{fs}`                | `[[storage]]`                                         | Filesystem type, e.g. `ext4`, `btrfs`                 |
+| `{mount}`             | `[[storage]]`                                         | Mount point, e.g. `/home`                             |
+| `{subsystem}`         | `[[device]] `                                         | Udev subsystem, e.g. `usb`, `net`, `block`            |
+| `{sysname}`           | `[[device]] `                                         | System name, e.g. `sda`, `event4`                     |
+| `{sysnum}`            | `[[device]] `                                         | System number                                         |
+| `{devtype}`           | `[[device]] `                                         | Device type, e.g. `usb_device`, `partition`           |
+| `{driver}`            | `[[device]] `                                         | Kernel driver name, e.g. `usb-storage`                |
+| `{seq_num}`           | `[[device]] `                                         | Kernel event sequence number                          |
+| `{syspath}`           | `[[device]] `                                         | Full sysfs path of the device                         |
+| `{devpath}`           | `[[device]] `                                         | Udev device path, e.g. `/devices/.../usb1`            |
+| `{devnode}`           | `[[device]] `                                         | Device node path, e.g. `/dev/sda`                     |
