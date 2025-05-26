@@ -3,8 +3,8 @@ use tokio::process::Command;
 
 pub fn parse_urgency(s: &str) -> Urgency {
     match s {
-        "low" => Urgency::Low,
-        "normal" => Urgency::Normal,
+        "low"      => Urgency::Low,
+        "normal"   => Urgency::Normal,
         "critical" => Urgency::Critical,
         _ => Urgency::Normal,
     }

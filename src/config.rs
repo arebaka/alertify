@@ -1,34 +1,36 @@
-use serde::Deserialize;
-use std::{env, fs, path::PathBuf};
 use anyhow::{Context, Result};
+use serde::Deserialize;
+use std::{env, fs, path::{Path, PathBuf}};
 
 use crate::message::Message;
+
+const DEFAULT_CONFIG: &str = include_str!("../config.example.toml");
 
 #[derive(Debug, Deserialize, Clone)]
 pub struct Config {
     #[serde(default)]
-    pub battery: Vec<BatteryCase>,
+    pub battery: Vec<BatteryRule>,
     #[serde(default)]
-    pub power_supply: Vec<PowerStatusCase>,
+    pub power_supply: Vec<PowerStatusRule>,
     #[serde(default)]
-    pub memory: Vec<MemoryCase>,
+    pub memory: Vec<MemoryRule>,
     #[serde(default)]
-    pub storage: Vec<StorageCase>,
+    pub storage: Vec<StorageRule>,
     #[serde(default)]
-    pub device: Vec<DeviceCase>,
+    pub device: Vec<DeviceRule>,
     pub network: NetworkConfig,
     pub bluetooth: BluetoothConfig,
 }
 
 #[derive(Debug, Deserialize, Clone)]
 #[serde(default)]
-pub struct BatteryCase {
+pub struct BatteryRule {
     pub level: f64,
     #[serde(flatten)]
     pub message: Message,
 }
 
-impl Default for BatteryCase {
+impl Default for BatteryRule {
     fn default() -> Self {
         Self {
             level: 20.0,
@@ -43,13 +45,13 @@ impl Default for BatteryCase {
 
 #[derive(Debug, Deserialize, Clone)]
 #[serde(default)]
-pub struct MemoryCase {
+pub struct MemoryRule {
     pub level: f32,
     #[serde(flatten)]
     pub message: Message,
 }
 
-impl Default for MemoryCase {
+impl Default for MemoryRule {
     fn default() -> Self {
         Self {
             level: 90.0,
@@ -64,13 +66,13 @@ impl Default for MemoryCase {
 
 #[derive(Debug, Deserialize, Clone)]
 #[serde(default)]
-pub struct StorageCase {
+pub struct StorageRule {
     pub level: f32,
     #[serde(flatten)]
     pub message: Message,
 }
 
-impl Default for StorageCase {
+impl Default for StorageRule {
     fn default() -> Self {
         Self {
             level: 95.0,
@@ -85,7 +87,7 @@ impl Default for StorageCase {
 
 #[derive(Debug, Deserialize, Clone)]
 #[serde(default)]
-pub struct DeviceCase {
+pub struct DeviceRule {
     pub action: String,
     pub initialized: Option<bool>,
     pub subsystem: Option<String>,
@@ -97,7 +99,7 @@ pub struct DeviceCase {
     pub message: Message,
 }
 
-impl Default for DeviceCase {
+impl Default for DeviceRule {
     fn default() -> Self {
         Self {
             action: "add".to_string(),
@@ -118,7 +120,7 @@ impl Default for DeviceCase {
 
 #[derive(Debug, Deserialize, Clone)]
 #[serde(default)]
-pub struct PowerStatusCase {
+pub struct PowerStatusRule {
     pub name: Option<String>,
     #[serde(rename = "type")]
     pub supply_type: Option<String>,
@@ -127,7 +129,7 @@ pub struct PowerStatusCase {
     pub message: Message,
 }
 
-impl Default for PowerStatusCase {
+impl Default for PowerStatusRule {
     fn default() -> Self {
         Self {
             name: None,
@@ -164,17 +166,28 @@ fn get_config_path() -> Result<PathBuf> {
         });
 
     let path = xdg_config_home.join("alertify").join("config.toml");
+    Ok(path)
+}
 
-    if path.exists() {
-        Ok(path)
-    } else {
-        Err(anyhow::anyhow!("Configuration file not found: {:?}", path))
+fn ensure_config_exists(path: &Path) -> Result<()> {
+    if !path.exists() {
+        if let Some(parent) = path.parent() {
+            fs::create_dir_all(parent)
+                .with_context(|| format!("Failed to create config directory: {}", parent.display()))?;
+        }
+
+        fs::write(path, DEFAULT_CONFIG)
+            .with_context(|| format!("Failed to write default config to {}", path.display()))?;
     }
+
+    Ok(())
 }
 
 pub fn get_config() -> Result<Config> {
     let config_path = get_config_path()
         .context("Failed to locate configuration file")?;
+
+    ensure_config_exists(&config_path)?;
 
     let config_raw = fs::read_to_string(&config_path)
         .with_context(|| format!("Failed to read config file: {}", config_path.display()))?;

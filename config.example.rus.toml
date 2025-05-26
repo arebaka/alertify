@@ -55,46 +55,6 @@ body = "USB устройство было отключено: {devpath}"
 icon = "media-flash"
 hints = ["transient", "category:usb", "string:x-dunst-stack-tag:usb.disconnect"]
 
-[[device]]
-action = "add"
-subsystem = "drm"
-urgency = "low"
-appname = "HDMI"
-summary = "Подключён"
-body = "HDMI устройство было подключено"
-icon = "video-display"
-hints = ["transient", "category:hdmi", "string:x-dunst-stack-tag:hdmi.connect"]
-
-[[device]]
-action = "remove"
-subsystem = "drm"
-urgency = "low"
-appname = "HDMI"
-summary = "Отключён"
-body = "HDMI устройство отключено"
-icon = "video-display"
-hints = ["transient", "category:hdmi", "string:x-dunst-stack-tag:hdmi.disconnect"]
-
-[[device]]
-action = "add"
-subsystem = "sound"
-urgency = "low"
-appname = "Jack 3.5"
-summary = "Аудиоразъём подключён"
-body = "Аудио устройство подключено"
-icon = "audio-headphones"
-hints = ["transient", "category:audio", "string:x-dunst-stack-tag:audio.connect"]
-
-[[device]]
-action = "remove"
-subsystem = "sound"
-urgency = "low"
-appname = "Jack 3.5"
-summary = "Аудиоразъём отключён"
-body = "Аудио устройство отключено"
-icon = "audio-headphones"
-hints = ["transient", "category:audio", "string:x-dunst-stack-tag:audio.disconnect"]
-
 [[power_supply]]
 name = "AC"
 online = "1"
@@ -114,35 +74,3 @@ summary = "Кабель питания отключён"
 body = ""
 icon = "ac-adapter"
 hints = ["transient", "category:power-supply", "string:x-dunst-stack-tag:power-supply"]
-
-[network.disconnect]
-urgency = "critical"
-appname = "Сеть"
-summary = "Отключена"
-body = "Сетевое подключение потеряно"
-icon = "network-offline"
-hints = ["transient", "category:network", "string:x-dunst-stack-tag:network.disconnect"]
-
-[network.reconnect]
-urgency = "normal"
-appname = "Сеть"
-summary = "Восстановлена"
-body = "Сетевое подключение восстановлено"
-icon = "network-transmit-receive"
-hints = ["transient", "category:network", "string:x-dunst-stack-tag:network.reconnect"]
-
-[bluetooth.disconnect]
-urgency = "low"
-appname = "Bluetooth"
-summary = "Отключен"
-body = "Bluetooth устройство отключено"
-icon = "bluetooth-disabled"
-hints = ["transient", "category:bluetooth", "string:x-dunst-stack-tag:bluetooth.disconnect"]
-
-[bluetooth.reconnect]
-urgency = "low"
-appname = "Bluetooth"
-summary = "Подключен"
-body = "Bluetooth устройство подключено"
-icon = "bluetooth-active"
-hints = ["transient", "category:bluetooth", "string:x-dunst-stack-tag:bluetooth.reconnect"]
