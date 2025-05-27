@@ -76,6 +76,7 @@ pub async fn listen_udev(rules: Config, sent: Arc<Mutex<HashSet<String>>>) -> Re
             let devtype   = event.devtype().and_then(|s| s.to_str().map(str::to_string));
             let driver    = event.driver().and_then(|s| s.to_str().map(str::to_string));
             let seq_num   = Some(event.sequence_number().to_string());
+            let devnum    = event.devnum().map(|n| n.to_string());
             let syspath   = event.syspath().to_str().map(str::to_string);
             let devpath   = event.devpath().to_str().map(str::to_string);
             let devnode   = event.devnode().and_then(|s| s.to_str().map(str::to_string));
@@ -86,7 +87,8 @@ pub async fn listen_udev(rules: Config, sent: Arc<Mutex<HashSet<String>>>) -> Re
             fields.insert("devtype",   devtype);
             fields.insert("driver",    driver);
             fields.insert("seq_num",   seq_num);
-            fields.insert("syspath",   syspath);
+            fields.insert("devnum",    devnum.clone());
+            fields.insert("syspath",   syspath.clone());
             fields.insert("devpath",   devpath);
             fields.insert("devnode",   devnode);
 

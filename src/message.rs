@@ -19,9 +19,9 @@ pub struct Message {
 }
 
 impl Message {
-    fn render(template: &str, fields: &HashMap<&str, String>) -> String {
+    fn render(template: String, fields: &HashMap<&str, String>) -> String {
         let re = Regex::new(r"\{([a-zA-Z0-9_]+)\}").unwrap();
-        re.replace_all(template, |caps: &Captures| {
+        re.replace_all(&template, |caps: &Captures| {
             let key = &caps[1];
             fields
                 .get(key)
@@ -37,16 +37,17 @@ impl Message {
 
         notification
             .urgency(urgency)
-            .appname(&Self::render(&self.appname, fields))
-            .summary(&Self::render(&self.summary, fields))
-            .body(&Self::render(&self.body, fields))
+            .appname(&Self::render(self.appname.clone(), fields))
+            .summary(&Self::render(self.summary.clone(), fields))
+            .body(&Self::render(self.body.clone(), fields))
             .icon(&self.icon);
         if let Some(timeout) = self.timeout {
             notification.timeout(Timeout::Milliseconds(timeout));
         }
 
         for hint in &self.hints {
-            notification.hint(hint.clone().into());
+            let rendered = MyHint(Self::render(hint.0.clone(), fields));
+            notification.hint(rendered.into());
         }
 
         let _ = notification.show();
