@@ -1,85 +1,87 @@
 [[battery]]
 level = 20
 urgency = "critical"
-appname = "Низкий заряд батареи"
-summary = "Уровень заряда упал до {left_percent}%!"
-body = ""
-icon = "battery-caution"
+appname = ""
+summary = "Низкий заряд батареи"
+body = "Уровень заряда упал до {left_percent}%!"
+icon = "battery-caution-symbolic"
 hints = ["transient", "category:battery", "string:x-dunst-stack-tag:battery.low"]
 
 [[battery]]
 level = 5
 urgency = "critical"
-appname = "Критический уровень заряда батареи"
-summary = "Уровень заряда батареи упал до {left_percent}%!"
-body = ""
-icon = "battery-empty"
+appname = ""
+summary = "Критический уровень заряда батареи"
+body = "Уровень заряда батареи упал до {left_percent}%!"
+icon = "battery-empty-symbolic"
 timeout = 0
 hints = ["transient", "category:battery", "string:x-dunst-stack-tag:battery.low"]
 
 [[cpu]]
 level = 90.0
 urgency = "normal"
-appname = "Высокое использование процессора"
+appname = ""
 summary = "ЦПУ используется на {used_percent}%!"
-body = "Максимальная тактовая частота: {max_freq} КГц, в среднем: {avg_freq} КГц."
-icon = "dialog-warning"
+body = "Максимальная тактовая частота ядра: {max_freq} КГц, в среднем: {avg_freq} КГц."
+icon = "dialog-warning-symbolic"
 hints = ["transient", "category:cpu", "string:x-dunst-stack-tag:cpu.high"]
 
 [[memory]]
 level = 90.0
 urgency = "normal"
-appname = "Высокое использование ОЗУ"
+appname = ""
 summary = "ОЗУ используется на {used_percent}%!"
 body = "Всего доступно {total}, осталось {left}."
-icon = "dialog-warning"
+icon = "dialog-warning-symbolic"
 hints = ["transient", "category:memory", "string:x-dunst-stack-tag:memory.high"]
 
 [[storage]]
 level = 95.0
 urgency = "normal"
-appname = "Мало свободного места"
+appname = ""
 summary = "Доступно менее {left_percent}% дискового пространства!"
 body = "На устройстве {name} всего доступно {total}, осталось {left}."
-icon = "drive-harddisk"
-hints = ["category:storage", "string:x-dunst-stack-tag:storage.low"]
+icon = "drive-harddisk-symbolic"
+hints = ["category:storage", "string:x-dunst-stack-tag:storage.high"]
 
 [[device]]
-action = "bind"
-subsystem = "usb"
+action = "add"
+subsystem = "block"
+devtype = "disk"
 urgency = "low"
-appname = "USB"
+appname = ""
 summary = "Устройство подключено"
-body = "Подключено новое USB устройство: {devpath}"
-icon = "media-flash"
-hints = ["transient", "category:usb", "string:x-dunst-stack-tag:usb.connect"]
+body = "Подключено новое USB устройство: {devnode}"
+icon = "media-flash-symbolic"
+hints = ["transient", "category:usb", "string:x-dunst-stack-tag:block.{devnum}"]
 
 [[device]]
-action = "unbind"
-subsystem = "usb"
+action = "remove"
+subsystem = "block"
+devtype = "disk"
 urgency = "low"
-appname = "USB"
+appname = ""
 summary = "Устройство отключено"
-body = "USB устройство было отключено: {devpath}"
-icon = "media-flash"
-hints = ["transient", "category:usb", "string:x-dunst-stack-tag:usb.disconnect"]
+body = "USB устройство было отключено: {devnode}"
+icon = "media-flash-symbolic"
+hints = ["transient", "category:usb", "string:x-dunst-stack-tag:block.{devnum}"]
 
 [[power_supply]]
 name = "AC"
 online = "1"
 urgency = "low"
-appname = "Питание"
+appname = ""
 summary = "Кабель питания подключён"
 body = ""
-icon = "ac-adapter"
+icon = "ac-adapter-symbolic"
 hints = ["transient", "category:power-supply", "string:x-dunst-stack-tag:power-supply"]
 
 [[power_supply]]
 name = "AC"
 online = "0"
 urgency = "low"
-appname = "Питание"
+appname = ""
 summary = "Кабель питания отключён"
 body = ""
-icon = "ac-adapter"
+icon = "ac-adapter-symbolic"
 hints = ["transient", "category:power-supply", "string:x-dunst-stack-tag:power-supply"]

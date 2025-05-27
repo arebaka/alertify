@@ -1,85 +1,87 @@
 [[battery]]
 level = 20
 urgency = "critical"
-appname = "Low Battery"
-summary = "Battery level dropped to {left_percent}%!"
-body = ""
-icon = "battery-caution"
+appname = ""
+summary = "Low Battery"
+body = "Battery level dropped to {left_percent}%!"
+icon = "battery-caution-symbolic"
 hints = ["transient", "category:battery", "string:x-dunst-stack-tag:battery.low"]
 
 [[battery]]
 level = 5
 urgency = "critical"
-appname = "Critical Battery Level"
-summary = "Battery level dropped to {left_percent}%!"
-body = ""
-icon = "battery-empty"
+appname = ""
+summary = "Critical Battery Level"
+body = "Battery level dropped to {left_percent}%!"
+icon = "battery-empty-symbolic"
 timeout = 0
 hints = ["transient", "category:battery", "string:x-dunst-stack-tag:battery.low"]
 
 [[cpu]]
 level = 90.0
 urgency = "normal"
-appname = "High CPU Usage"
+appname = ""
 summary = "CPU usage is at {used_percent}%!"
 body = "Maximum clock frequency: {max_freq} KHz, average: {avg_freq} KHz."
-icon = "dialog-warning"
+icon = "dialog-warning-symbolic"
 hints = ["transient", "category:cpu", "string:x-dunst-stack-tag:cpu.high"]
 
 [[memory]]
 level = 90.0
 urgency = "normal"
-appname = "High RAM Usage"
+appname = ""
 summary = "RAM usage is at {used_percent}%!"
 body = "Total available: {total}, remaining: {left}."
-icon = "dialog-warning"
+icon = "dialog-warning-symbolic"
 hints = ["transient", "category:memory", "string:x-dunst-stack-tag:memory.high"]
 
 [[storage]]
 level = 95.0
 urgency = "normal"
-appname = "Low Disk Space"
+appname = ""
 summary = "Less than {left_percent}% disk space available!"
 body = "Device {name} total: {total}, left: {left}."
-icon = "drive-harddisk"
-hints = ["category:storage", "string:x-dunst-stack-tag:storage.low"]
+icon = "drive-harddisk-symbolic"
+hints = ["category:storage", "string:x-dunst-stack-tag:storage.high"]
 
 [[device]]
-action = "bind"
-subsystem = "usb"
+action = "add"
+subsystem = "block"
+devtype = "disk"
 urgency = "low"
-appname = "USB"
+appname = ""
 summary = "Device Connected"
-body = "A new USB device was connected: {devpath}"
-icon = "media-flash"
-hints = ["transient", "category:usb", "string:x-dunst-stack-tag:usb.connect"]
+body = "A new USB device was connected: {devnode}"
+icon = "media-flash-symbolic"
+hints = ["transient", "category:block", "string:x-dunst-stack-tag:block.{devnum}"]
 
 [[device]]
-action = "unbind"
-subsystem = "usb"
+action = "remove"
+subsystem = "block"
+devtype = "disk"
 urgency = "low"
-appname = "USB"
+appname = ""
 summary = "Device Disconnected"
-body = "USB device was disconnected: {devpath}"
-icon = "media-flash"
-hints = ["transient", "category:usb", "string:x-dunst-stack-tag:usb.disconnect"]
+body = "USB device was disconnected: {devnode}"
+icon = "media-flash-symbolic"
+hints = ["transient", "category:block", "string:x-dunst-stack-tag:block.{devnum}"]
 
 [[power_supply]]
 name = "AC"
 online = "1"
 urgency = "low"
-appname = "Power"
+appname = ""
 summary = "Power cable connected"
 body = ""
-icon = "ac-adapter"
+icon = "ac-adapter-symbolic"
 hints = ["transient", "category:power-supply", "string:x-dunst-stack-tag:power-supply"]
 
 [[power_supply]]
 name = "AC"
 online = "0"
 urgency = "low"
-appname = "Power"
+appname = ""
 summary = "Power cable disconnected"
 body = ""
-icon = "ac-adapter"
+icon = "ac-adapter-symbolic"
 hints = ["transient", "category:power-supply", "string:x-dunst-stack-tag:power-supply"]
