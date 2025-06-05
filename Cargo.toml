@@ -1,6 +1,6 @@
 [package]
 name = "alertify"
-version = "0.2.1"
+version = "0.2.2"
 edition = "2021"
 authors = ["arelive <me@are.moe>"]
 description = "Notification tool for battery, memory, storage, devices and power supply state monitoring on Linux"

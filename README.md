@@ -114,7 +114,7 @@ icon = "media-flash-symbolic"
 hints = ["transient", "category:block", "string:x-dunst-stack-tag:block.{devnum}"]
 
 [[power_supply]]
-name = "AC"
+type = "Mains"
 online = "1"
 urgency = "low"
 appname = ""
@@ -124,7 +124,7 @@ icon = "ac-adapter-symbolic"
 hints = ["transient", "category:power-supply", "string:x-dunst-stack-tag:power-supply"]
 
 [[power_supply]]
-name = "AC"
+type = "Mains"
 online = "0"
 urgency = "low"
 appname = ""
