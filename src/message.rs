@@ -2,55 +2,106 @@ use serde::Deserialize;
 use notify_rust::{Hint, Notification, Timeout};
 use regex::{Captures, Regex};
 use std::collections::{HashMap, HashSet};
+use std::sync::OnceLock;
+use anyhow::{Context, Result};
+use log::{error, debug};
 
-use crate::{utils::parse_urgency};
+use crate::utils::{parse_urgency, execute_command};
+
+static TEMPLATE_REGEX: OnceLock<Regex> = OnceLock::new();
+
+fn get_template_regex() -> &'static Regex {
+    TEMPLATE_REGEX.get_or_init(|| {
+        Regex::new(r"\{([a-zA-Z0-9_]+)\}")
+            .expect("Failed to compile template regex")
+    })
+}
+
+fn default_urgency() -> String {
+    "normal".to_string()
+}
+
+fn default_appname() -> String {
+    "alertify".to_string()
+}
 
 #[derive(Default, Debug, Deserialize, Clone)]
 pub struct Message {
+   #[serde(default = "default_urgency")]
     pub urgency: String,
+    #[serde(default = "default_appname")]
     pub appname: String,
-    pub summary: String,
-    pub body: String,
-    pub icon: String,
+    #[serde(default)]
+    pub summary: Option<String>,
+    #[serde(default)]
+    pub body: Option<String>,
+    #[serde(default)]
+    pub icon: Option<String>,
     pub timeout: Option<u32>,
+    #[serde(default)]
     pub hints: HashSet<MyHint>,
     #[serde(default)]
     pub exec: Option<String>,
 }
 
 impl Message {
-    fn render(template: String, fields: &HashMap<&str, String>) -> String {
-        let re = Regex::new(r"\{([a-zA-Z0-9_]+)\}").unwrap();
-        re.replace_all(&template, |caps: &Captures| {
+    fn render_template(template: &str, fields: &HashMap<&str, String>) -> String {
+        if template.is_empty() {
+            return String::new();
+        }
+
+        let regex = get_template_regex();
+        regex.replace_all(template, |caps: &Captures| {
             let key = &caps[1];
-            fields
-                .get(key)
-                .cloned()
-                .unwrap_or_else(|| caps[0].to_string())
+            match fields.get(key) {
+                Some(value) => value.clone(),
+                None => caps[0].to_string()
+            }
         })
-        .into_owned()
+        .to_string()
     }
 
-    pub fn notify(&self, fields: &HashMap<&str, String>) {
+    pub fn notify(&self, fields: &HashMap<&str, String>) -> Result<()> {
         let urgency = parse_urgency(&self.urgency);
         let mut notification = Notification::new();
 
-        notification
-            .urgency(urgency)
-            .appname(&Self::render(self.appname.clone(), fields))
-            .summary(&Self::render(self.summary.clone(), fields))
-            .body(&Self::render(self.body.clone(), fields))
-            .icon(&self.icon);
-        if let Some(timeout) = self.timeout {
-            notification.timeout(Timeout::Milliseconds(timeout));
+        notification.urgency(urgency);
+
+        let rendered_appname = Self::render_template(&self.appname, fields);
+        notification.appname(&rendered_appname);
+
+        if let Some(ref summary) = self.summary {
+            notification.summary(&Self::render_template(summary, fields));
+        }
+
+        if let Some(ref body) = self.body {
+            notification.body(&Self::render_template(body, fields));
+        }
+
+        if let Some(ref icon) = self.icon {
+            notification.icon(icon);
+        }
+
+        if let Some(timeout_ms) = self.timeout {
+            notification.timeout(Timeout::Milliseconds(timeout_ms));
         }
 
         for hint in &self.hints {
-            let rendered = MyHint(Self::render(hint.0.clone(), fields));
+            let rendered = hint.render(fields);
             notification.hint(rendered.into());
         }
 
-        let _ = notification.show();
+        notification.show()
+            .with_context(|| "Failed to show notification")?;
+
+        debug!("Notification sent: {}", self.appname);
+
+        if let Some(ref command) = self.exec {
+            let rendered = Self::render_template(command, fields);
+            let _ = execute_command(Some(&rendered));
+        }
+
+        Ok(())
     }
 }
 
@@ -58,27 +109,87 @@ impl Message {
 #[serde(transparent)]
 pub struct MyHint(String);
 
+impl MyHint {
+    pub fn new(hint: String) -> Self {
+        Self(hint)
+    }
+
+    fn render(&self, fields: &HashMap<&str, String>) -> Self {
+        Self(Message::render_template(&self.0.clone(), fields))
+    }
+
+    fn parse_components(&self) -> HintComponents {
+        let parts: Vec<&str> = self.0.rsplitn(3, ':').collect();
+
+        match parts.as_slice() {
+            [value, key, hint_type] => HintComponents {
+                hint_type: Some(hint_type),
+                key,
+                value,
+            },
+            [value, key] => HintComponents {
+                hint_type: None,
+                key,
+                value,
+            },
+            [key] => HintComponents {
+                hint_type: None,
+                key,
+                value: "",
+            },
+            _ => HintComponents {
+                hint_type: None,
+                key: &self.0,
+                value: "",
+            },
+        }
+    }
+}
+
+#[derive(Debug)]
+struct HintComponents<'a> {
+    hint_type: Option<&'a str>,
+    key: &'a str,
+    value: &'a str,
+}
+
 impl From<MyHint> for Hint {
     fn from(hint: MyHint) -> Hint {
-        let s = hint.0.as_str();
-        let parts: Vec<&str> = s.rsplitn(3, ':').collect();
+        let components = hint.parse_components();
 
-        let (key, value) = match *parts.as_slice() {
-            // bool:transient:true
-            [val, key, "bool"] => (key, val),
-            // int:volume:100
-            [val, key, "int"] => (key, val),
-            // double:progress:0.75
-            [val, key, "double"] => (key, val),
-            // string:x-dunst-stack-tag:battery.low
-            [val, key, "string"] => (key, val),
-            // fallback: no type, just key:value
-            [val, key] => (key, val),
-            // just key
-            [key] => (key, ""),
-            _ => (s, ""),
-        };
+        // Try to create a typed hint first
+        if let Some(hint_type) = components.hint_type {
+            match hint_type {
+                "bool" => {
+                    if let Ok(bool_val) = components.value.parse::<bool>() {
+                        return Hint::from_key_val(components.key, &bool_val.to_string())
+                            .unwrap_or_else(|_| Hint::Custom(components.key.to_string(), components.value.to_string()));
+                    }
+                }
+                "int" => {
+                    if let Ok(int_val) = components.value.parse::<i32>() {
+                        return Hint::from_key_val(components.key, &int_val.to_string())
+                            .unwrap_or_else(|_| Hint::Custom(components.key.to_string(), components.value.to_string()));
+                    }
+                }
+                "double" => {
+                    if let Ok(double_val) = components.value.parse::<f64>() {
+                        return Hint::from_key_val(components.key, &double_val.to_string())
+                            .unwrap_or_else(|_| Hint::Custom(components.key.to_string(), components.value.to_string()));
+                    }
+                }
+                "string" => {
+                    return Hint::from_key_val(components.key, components.value)
+                        .unwrap_or_else(|_| Hint::Custom(components.key.to_string(), components.value.to_string()));
+                }
+                _ => {
+                    error!("Unknown hint type: {}", hint_type);
+                }
+            }
+        }
 
-        Hint::from_key_val(key, value).unwrap_or(Hint::Custom(key.to_string(), value.to_string()))
+        // Fallback to string hint or custom hint
+        Hint::from_key_val(components.key, components.value)
+            .unwrap_or_else(|_| Hint::Custom(components.key.to_string(), components.value.to_string()))
     }
 }

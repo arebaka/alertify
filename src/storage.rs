@@ -4,7 +4,7 @@ use std::{collections::{HashMap, HashSet}, sync::{Arc, Mutex}, time::Duration};
 use sysinfo::{DiskKind, Disks};
 use tokio::{task, time::sleep};
 
-use crate::{config::StorageRule, utils::maybe_exec};
+use crate::{config::StorageRule, utils::execute_command};
 
 pub async fn monitor_storage(rules: Vec<StorageRule>, sent: Arc<Mutex<HashSet<String>>>) -> Result<()> {
     loop {
@@ -64,9 +64,9 @@ pub async fn monitor_storage(rules: Vec<StorageRule>, sent: Arc<Mutex<HashSet<St
                     fields.insert("left_percent",      (left_percent as u32).to_string());
 
                     let rule_clone = rule.clone();
-                    maybe_exec(rule_clone.message.exec.as_ref());
+                    let _ = execute_command(rule_clone.message.exec.as_ref());
                     task::spawn_blocking(move || {
-                        rule_clone.message.notify(&fields);
+                        let _ = rule_clone.message.notify(&fields);
                     })
                     .await?;
                 }

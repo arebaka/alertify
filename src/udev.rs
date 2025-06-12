@@ -4,7 +4,7 @@ use tokio::task;
 use tokio_stream::StreamExt;
 use tokio_udev::{AsyncMonitorSocket, EventType, MonitorBuilder, Device};
 
-use crate::{config::{Config, PowerStatusRule}, utils::maybe_exec};
+use crate::{config::{Config, PowerStatusRule}, utils::execute_command};
 
 pub async fn listen_udev(rules: Config, sent: Arc<Mutex<HashSet<String>>>) -> Result<()> {
     const ALLOW_SUBSYSTEMS: &[&str] = &[
@@ -93,15 +93,16 @@ pub async fn listen_udev(rules: Config, sent: Arc<Mutex<HashSet<String>>>) -> Re
             fields.insert("devnode",   devnode);
 
             let rule_clone = rule.clone();
-            maybe_exec(rule_clone.message.exec.as_ref());
+            let _ = execute_command(rule_clone.message.exec.as_ref());
             task::spawn_blocking(move || {
-                rule_clone.message.notify(
+                let _ = rule_clone.message.notify(
                     &fields
                         .iter()
                         .map(|(&k, v)| (k, v.clone().unwrap_or_default()))
                         .collect(),
                 );
-            });
+            })
+            .await?;
         }
     }
 
@@ -141,9 +142,9 @@ async fn handle_power_supply_change(event: Device, rules: Vec<PowerStatusRule>, 
         fields.insert("type", supply_type.clone());
         fields.insert("online", online.clone());
 
-        maybe_exec(rule.message.exec.as_ref());
+        let _ = execute_command(rule.message.exec.as_ref());
         task::spawn_blocking(move || {
-            rule.message.notify(
+            let _ = rule.message.notify(
                 &fields
                     .iter()
                     .map(|(&k, v)| (k, v.clone().unwrap_or_default()))

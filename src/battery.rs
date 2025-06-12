@@ -4,7 +4,7 @@ use tokio::{task, time::sleep};
 use zbus::fdo::PropertiesProxy;
 use zbus_names::InterfaceName;
 
-use crate::{config::BatteryRule, utils::maybe_exec};
+use crate::{config::BatteryRule, utils::execute_command};
 
 pub async fn monitor_battery(rules: Vec<BatteryRule>, sent: Arc<Mutex<HashSet<String>>>) -> Result<()> {
     let conn = zbus::Connection::system().await?;
@@ -47,9 +47,9 @@ pub async fn monitor_battery(rules: Vec<BatteryRule>, sent: Arc<Mutex<HashSet<St
                 fields.insert("used_percent", (100 - value as u32).to_string());
 
                 let rule_clone = rule.clone();
-                maybe_exec(rule_clone.message.exec.as_ref());
+                let _ = execute_command(rule_clone.message.exec.as_ref());
                 task::spawn_blocking(move || {
-                    rule_clone.message.notify(&fields);
+                    let _ = rule_clone.message.notify(&fields);
                 })
                 .await?;
             }

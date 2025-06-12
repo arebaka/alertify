@@ -4,7 +4,7 @@ use std::{collections::{HashMap, HashSet}, sync::{Arc, Mutex}, time::Duration};
 use sysinfo::System;
 use tokio::{task, time::sleep};
 
-use crate::{config::MemoryRule, utils::maybe_exec};
+use crate::{config::MemoryRule, utils::execute_command};
 
 pub async fn monitor_memory(rules: Vec<MemoryRule>, sent: Arc<Mutex<HashSet<String>>>) -> Result<()> {
     loop {
@@ -50,9 +50,9 @@ pub async fn monitor_memory(rules: Vec<MemoryRule>, sent: Arc<Mutex<HashSet<Stri
                 fields.insert("left_percent",      (free_percent as u32).to_string());
 
                 let rule_clone = rule.clone();
-                maybe_exec(rule_clone.message.exec.as_ref());
+                let _ = execute_command(rule_clone.message.exec.as_ref());
                 task::spawn_blocking(move || {
-                    rule_clone.message.notify(&fields);
+                    let _ = rule_clone.message.notify(&fields);
                 })
                 .await?;
             }
