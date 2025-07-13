@@ -3,6 +3,8 @@
 
 > **alertify** is a lightweight and efficient system notification tool written in Rust. It monitors system events like battery status, memory usage, device connections, and more, and sends desktop notifications to keep you informed in real time.
 
+![screenshot](https://github.com/user-attachments/assets/91692f46-f19c-441c-b709-77b9b2f6c4ab)
+
 ---
 
 ## Features
